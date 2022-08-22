@@ -30,11 +30,3 @@ class BaseModel:
     @classmethod
     def _predict(cls, model: Model, x: np.ndarray):
         return model.predict(x, callbacks=CallbackList())
-
-    @property
-    def image_shape(self):
-        return self._model.input_shape[1:3]
-
-    @property
-    def is_grayscale(self):
-        return self._model.input_shape[3] == 1
