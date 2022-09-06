@@ -1,24 +1,23 @@
 import typing as tp
-
 import numpy as np
 import cv2
 
-from .models import CNNModel, RNNModel
-from .video_handler import VideoHandler
+from src.analysis.analyst import Analyst
 from config import PathConfig
+from .models import CNNModel, RNNModel
+from .valence_arousal import ValenceArousal
+from .video_handler import VideoHandler
 
 
 class App:
     def __init__(self):
+        self.analyst = Analyst()
         self.cnn_model = CNNModel(PathConfig.CNN_MODEL_PATH)
         self.rnn_model = RNNModel(PathConfig.RNN_MODEL_PATH)
-
         self._feature_buffer = []
-        self.cnn_valence = 0
-        self.cnn_arousal = 0
 
-        self.rnn_valence = 0
-        self.rnn_arousal = 0
+        self.cnn_va = ValenceArousal()
+        self.rnn_va = ValenceArousal()
 
         self.arousal_valence_space: np.ndarray = cv2.imread(PathConfig.AROUSAL_VALENCE_SPACE_PATH)
         self.face_cascade = cv2.CascadeClassifier(PathConfig.FACE_RECOGNITION_MODEL_PATH)
@@ -34,6 +33,7 @@ class App:
                 self._inference_classification_model()
                 self.log_predictions()
 
+                frame = cv2.resize(frame, (frame.shape[1], frame.shape[1]))
                 frame = self._add_valence_arousal_space(frame)
                 frame = self._add_input_frame(frame, prepared_img)
                 webcam.show_video_frame(frame)
@@ -59,9 +59,8 @@ class App:
         if len(self._feature_buffer) >= self.rnn_model.window_size:
             window = self._feature_buffer[-self.rnn_model.window_size:]
             x = np.expand_dims(np.asarray(window), axis=0)
-            self.rnn_valence, self.rnn_arousal = self.rnn_model.predict(x)[0]
+            self.rnn_va = ValenceArousal(*self.rnn_model.predict(x)[0])
             self._feature_buffer = window
-        return self.rnn_valence, self.rnn_arousal
 
     def _inference_feature_extractor(self, img: np.ndarray):
         x = np.expand_dims(img, axis=0)
@@ -71,8 +70,7 @@ class App:
 
     def _inference_classification_model(self):
         x = np.expand_dims(self._feature_buffer[-1], axis=0)
-        self.cnn_valence, self.cnn_arousal = self.cnn_model.classify_features(x)[0]
-        return self.cnn_valence, self.cnn_arousal
+        self.cnn_va = ValenceArousal(*self.cnn_model.classify_features(x)[0])
 
     def _prepare_img(self, img: np.ndarray) -> np.ndarray:
         resized_img = cv2.resize(img, self.cnn_model.image_shape)
@@ -82,8 +80,7 @@ class App:
         return normalized_img
 
     def log_predictions(self):
-        print("CNN: Valence %.6s | Arousal %.6s   RNN: Valence %.6s | Arousal %.6s" %
-              (self.cnn_valence, self.cnn_arousal, self.rnn_valence, self.rnn_arousal))
+        print(f"CNN: {self.cnn_va}   RNN: {self.rnn_va}")
 
     def _add_valence_arousal_space(self, frame: np.ndarray):
         def get_value_coord(_metric: float, _scale: int, multiplier: float = 0.8) -> int:
@@ -97,17 +94,16 @@ class App:
         def add_point(_frame: np.ndarray, x: int, y: int, width: int, color: np.ndarray):
             _frame[x-width:x+width, y-width:y+width] = color
 
-        shape = (frame.shape[1], frame.shape[1])
-        resized_frame = cv2.resize(frame, shape)
-        av_space = cv2.resize(self.arousal_valence_space, shape)
+        shape = frame.shape
+        av_space = cv2.resize(self.arousal_valence_space, shape[0:2])
 
-        cnn_x, cnn_y = get_value_coord(-self.cnn_arousal, shape[0]), get_value_coord(self.cnn_valence, shape[1])
-        rnn_x, rnn_y = get_value_coord(-self.rnn_arousal, shape[0]), get_value_coord(self.rnn_valence, shape[1])
+        cnn_x, cnn_y = get_value_coord(-self.cnn_va.arousal, shape[0]), get_value_coord(self.cnn_va.valence, shape[1])
+        rnn_x, rnn_y = get_value_coord(-self.rnn_va.valence, shape[0]), get_value_coord(self.rnn_va.valence, shape[1])
 
         add_point(av_space, cnn_x, cnn_y, 4, np.array([255, 0, 0]))
         add_point(av_space, rnn_x, rnn_y, 4, np.array([0, 255, 0]))
 
-        return np.concatenate((resized_frame, av_space), axis=1)
+        return np.concatenate((frame, av_space), axis=1)
 
     def _add_input_frame(self, frame: np.ndarray, input_image: np.ndarray):
         shape = input_image.shape

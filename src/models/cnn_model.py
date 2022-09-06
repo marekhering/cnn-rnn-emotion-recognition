@@ -13,10 +13,10 @@ class CNNModel(BaseModel):
         classification_output = self._model.get_layer('dense_1')(classification_input)
         self._classification_model = Model(inputs=classification_input, outputs=classification_output)
 
-    def extract_features(self, x: np.ndarray):
+    def extract_features(self, x: np.ndarray) -> np.ndarray:
         return self._predict(self._extract_model, x)
 
-    def classify_features(self, x: np.ndarray):
+    def classify_features(self, x: np.ndarray) -> np.ndarray:
         return self._predict(self._classification_model, x)
 
     @property
