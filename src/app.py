@@ -4,14 +4,14 @@ import numpy as np
 import cv2
 
 from .models import CNNModel, RNNModel
-from .webcam_handler import WebcamHandler
-from config import CNN_MODEL_PATH, RNN_MODEL_PATH, AROUSAL_VALENCE_SPACE_PATH, FACE_RECOGNIOTION_MODEL_PATH
+from .video_handler import VideoHandler
+from config import PathConfig
 
 
 class App:
     def __init__(self):
-        self.cnn_model = CNNModel(CNN_MODEL_PATH)
-        self.rnn_model = RNNModel(RNN_MODEL_PATH)
+        self.cnn_model = CNNModel(PathConfig.CNN_MODEL_PATH)
+        self.rnn_model = RNNModel(PathConfig.RNN_MODEL_PATH)
 
         self._feature_buffer = []
         self.cnn_valence = 0
@@ -20,11 +20,11 @@ class App:
         self.rnn_valence = 0
         self.rnn_arousal = 0
 
-        self.arousal_valence_space: np.ndarray = cv2.imread(AROUSAL_VALENCE_SPACE_PATH)
-        self.face_cascade = cv2.CascadeClassifier(FACE_RECOGNIOTION_MODEL_PATH)
+        self.arousal_valence_space: np.ndarray = cv2.imread(PathConfig.AROUSAL_VALENCE_SPACE_PATH)
+        self.face_cascade = cv2.CascadeClassifier(PathConfig.FACE_RECOGNITION_MODEL_PATH)
 
-    def rnn_webcam_emotion_recognition(self):
-        with WebcamHandler() as webcam:
+    def rnn_video_emotion_recognition(self, source: tp.Union[str, int]):
+        with VideoHandler(source) as webcam:
             while True:
                 frame = webcam.read_video_frame()
                 face_img = self._find_face(frame)
