@@ -5,7 +5,7 @@ import cv2
 
 from .models import CNNModel, RNNModel
 from .webcam_handler import WebcamHandler
-from config import CNN_MODEL_PATH, RNN_MODEL_PATH
+from config import CNN_MODEL_PATH, RNN_MODEL_PATH, AROUSAL_VALENCE_SPACE_PATH, FACE_RECOGNIOTION_MODEL_PATH
 
 
 class App:
@@ -20,24 +20,40 @@ class App:
         self.rnn_valence = 0
         self.rnn_arousal = 0
 
+        self.arousal_valence_space: np.ndarray = cv2.imread(AROUSAL_VALENCE_SPACE_PATH)
+        self.face_cascade = cv2.CascadeClassifier(FACE_RECOGNIOTION_MODEL_PATH)
+
     def rnn_webcam_emotion_recognition(self):
         with WebcamHandler() as webcam:
             while True:
                 frame = webcam.read_video_frame()
-                self._inference_feature_extractor(frame)
+                face_img = self._find_face(frame)
+                prepared_img = self._prepare_img(face_img)
+                self._inference_feature_extractor(prepared_img)
                 self._inference_rnn_model()
                 self._inference_classification_model(self._feature_buffer[-1])
-                self.show_predictions()
+                self.log_predictions()
 
+                frame = self._add_valence_arousal_space(frame)
+                frame = self._add_input_frame(frame, prepared_img)
                 webcam.show_video_frame(frame)
                 if webcam.listen_for_quit_button():
                     break
 
     def cnn_predict_image_file(self, image_path: str):
         img = cv2.imread(image_path)
-        features = self._inference_feature_extractor(img)
+        prepared_img = self._prepare_img(img)
+        features = self._inference_feature_extractor(prepared_img)
         self._inference_classification_model(features)
-        self.show_predictions()
+        self.log_predictions()
+
+    def _find_face(self, frame: np.ndarray) -> np.ndarray:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = self.face_cascade.detectMultiScale(gray, 1.1, 4)
+        if len(faces) > 0:
+            x, y, w, h = faces[0]
+            return frame[y: y + h, x: x + w]
+        return np.zeros((1, 1, 3), dtype=np.uint8)
 
     def _inference_rnn_model(self):
         if len(self._feature_buffer) >= self.rnn_model.window_size:
@@ -48,8 +64,7 @@ class App:
         return self.rnn_valence, self.rnn_arousal
 
     def _inference_feature_extractor(self, img: np.ndarray):
-        prepared_img = self._prepare_img(img)
-        x = np.expand_dims(prepared_img, axis=0)
+        x = np.expand_dims(img, axis=0)
         features = self.cnn_model.extract_features(x)[0]
         self._feature_buffer.append(features)
         return features
@@ -60,12 +75,41 @@ class App:
         return self.cnn_valence, self.cnn_arousal
 
     def _prepare_img(self, img: np.ndarray) -> np.ndarray:
-        resized_img = cv2.resize(img, self.cnn_model.image_shape, interpolation=cv2.INTER_AREA)
+        resized_img = cv2.resize(img, self.cnn_model.image_shape)
         grayscale_image = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY)
         grayscale_image = np.expand_dims(grayscale_image, axis=-1)
         normalized_img = (grayscale_image / 255.).astype(np.float)
         return normalized_img
 
-    def show_predictions(self):
+    def log_predictions(self):
         print("CNN: Valence %.6s | Arousal %.6s   RNN: Valence %.6s | Arousal %.6s" %
               (self.cnn_valence, self.cnn_arousal, self.rnn_valence, self.rnn_arousal))
+
+    def _add_valence_arousal_space(self, frame: np.ndarray):
+        def get_value_coord(_metric: float, _scale: int, multiplier: float = 0.8) -> int:
+            _value = _metric * multiplier
+            _value = (_value + 1) / 2              # From (-1, 1) to (0, 1)
+            _value = int(_value * _scale)          # From (0, 1) to (0, scale)
+            _value = min([_value, _scale])         # Ensure that value is lower than scale
+            _value = max([_value, 0])              # Ensure that value is greater than 0
+            return _value
+
+        def add_point(_frame: np.ndarray, x: int, y: int, width: int, color: np.ndarray):
+            _frame[x-width:x+width, y-width:y+width] = color
+
+        shape = (frame.shape[1], frame.shape[1])
+        resized_frame = cv2.resize(frame, shape)
+        av_space = cv2.resize(self.arousal_valence_space, shape)
+
+        cnn_x, cnn_y = get_value_coord(-self.cnn_arousal, shape[0]), get_value_coord(self.cnn_valence, shape[1])
+        rnn_x, rnn_y = get_value_coord(-self.rnn_arousal, shape[0]), get_value_coord(self.rnn_valence, shape[1])
+
+        add_point(av_space, cnn_x, cnn_y, 4, np.array([255, 0, 0]))
+        add_point(av_space, rnn_x, rnn_y, 4, np.array([0, 255, 0]))
+
+        return np.concatenate((resized_frame, av_space), axis=1)
+
+    def _add_input_frame(self, frame: np.ndarray, input_image: np.ndarray):
+        shape = input_image.shape
+        frame[0:shape[0], 0:shape[1]] = (input_image * 255).astype(np.uint8)
+        return frame
