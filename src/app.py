@@ -31,7 +31,7 @@ class App:
                 prepared_img = self._prepare_img(face_img)
                 self._inference_feature_extractor(prepared_img)
                 self._inference_rnn_model()
-                self._inference_classification_model(self._feature_buffer[-1])
+                self._inference_classification_model()
                 self.log_predictions()
 
                 frame = self._add_valence_arousal_space(frame)
@@ -43,8 +43,8 @@ class App:
     def cnn_predict_image_file(self, image_path: str):
         img = cv2.imread(image_path)
         prepared_img = self._prepare_img(img)
-        features = self._inference_feature_extractor(prepared_img)
-        self._inference_classification_model(features)
+        self._inference_feature_extractor(prepared_img)
+        self._inference_classification_model()
         self.log_predictions()
 
     def _find_face(self, frame: np.ndarray) -> np.ndarray:
@@ -69,8 +69,8 @@ class App:
         self._feature_buffer.append(features)
         return features
 
-    def _inference_classification_model(self, features: np.ndarray):
-        x = np.expand_dims(features, axis=0)
+    def _inference_classification_model(self):
+        x = np.expand_dims(self._feature_buffer[-1], axis=0)
         self.cnn_valence, self.cnn_arousal = self.cnn_model.classify_features(x)[0]
         return self.cnn_valence, self.cnn_arousal
 
