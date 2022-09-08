@@ -1,11 +1,13 @@
-import numpy as np
+from __future__ import annotations
+
+import typing as tp
 
 
-class ValenceArousal:
+class ValenceArousal(tp.List):
     def __init__(self, valence: float = 0, arousal: float = 0):
+        super().__init__([valence, arousal])
         self.__valence = valence
         self.__arousal = arousal
-        self.__values = np.array([valence, arousal])
 
     @property
     def valence(self):

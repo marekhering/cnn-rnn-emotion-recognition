@@ -31,6 +31,8 @@ class App:
                 self._inference_feature_extractor(prepared_img)
                 self._inference_rnn_model()
                 self._inference_classification_model()
+                self.analyst.add_inference_result(self.rnn_va)
+
                 self.log_predictions()
 
                 frame = cv2.resize(frame, (frame.shape[1], frame.shape[1]))
@@ -98,7 +100,7 @@ class App:
         av_space = cv2.resize(self.arousal_valence_space, shape[0:2])
 
         cnn_x, cnn_y = get_value_coord(-self.cnn_va.arousal, shape[0]), get_value_coord(self.cnn_va.valence, shape[1])
-        rnn_x, rnn_y = get_value_coord(-self.rnn_va.valence, shape[0]), get_value_coord(self.rnn_va.valence, shape[1])
+        rnn_x, rnn_y = get_value_coord(-self.rnn_va.arousal, shape[0]), get_value_coord(self.rnn_va.valence, shape[1])
 
         add_point(av_space, cnn_x, cnn_y, 4, np.array([255, 0, 0]))
         add_point(av_space, rnn_x, rnn_y, 4, np.array([0, 255, 0]))
