@@ -2,7 +2,7 @@ from keras.callbacks import CallbackList
 from keras.models import load_model, Model
 import numpy as np
 
-from src import metrics
+from src.models import metrics
 
 
 class BaseModel:
