@@ -15,12 +15,15 @@ class App:
         self.cnn_model = CNNModel(PathConfig.CNN_MODEL_PATH)
         self.rnn_model = RNNModel(PathConfig.RNN_MODEL_PATH)
         self.face_detection_model = cv2.CascadeClassifier(PathConfig.FACE_RECOGNITION_MODEL_PATH)
+        self._reset_attributes()
 
+    def _reset_attributes(self):
         self._feature_buffer = []
         self._cnn_va = ValenceArousal()
         self._rnn_va = ValenceArousal()
 
-    def rnn_video_emotion_recognition(self, source: tp.Union[str, int]):
+    def visualize_inference(self, source: tp.Union[str, int]):
+        self._reset_attributes()
         with VideoHandler(source) as video_handler:
             while True:
                 video_frame = video_handler.read_video_frame()
@@ -28,16 +31,18 @@ class App:
                 prepared_img = self._prepare_img(face_img)
 
                 self._inference_feature_extractor(prepared_img)
-                self._inference_rnn_model()
+                rnn_run = self._inference_rnn_model()
                 self._inference_classification_model()
-                self.analyst.add_inference_result(self._rnn_va)
+
+                if rnn_run:
+                    self.analyst.add_inference_result(self._rnn_va)
 
                 self.log_predictions()
-                self.visualize(video_frame, prepared_img)
+                self._visualize(video_frame, prepared_img)
                 if self.listen_for_quit_button():
                     break
 
-    def cnn_predict_image_file(self, image_path: str):
+    def inference_image(self, image_path: str):
         img = cv2.imread(image_path)
         prepared_img = self._prepare_img(img)
         self._inference_feature_extractor(prepared_img)
@@ -71,19 +76,24 @@ class App:
             x = np.expand_dims(np.asarray(window), axis=0)
             self._rnn_va = ValenceArousal(*self.rnn_model.predict(x)[0])
             self._feature_buffer = window
+            return True
+        return False
 
     def _inference_classification_model(self):
         x = np.expand_dims(self._feature_buffer[-1], axis=0)
         self._cnn_va = ValenceArousal(*self.cnn_model.classify_features(x)[0])
 
-    def visualize(self, video_frame: np.ndarray, inference_input: np.ndarray):
+    def _visualize(self, video_frame: np.ndarray, inference_input: np.ndarray):
         frame = Frame(FrameConfig.MAIN_FRAME_SIZE, FrameConfig.FRAME_BACKGROUND)
         frame.add(video_frame, (0, 0), (.5, .33))
         frame.add(inference_input * 255, (0, 0))
         frame.add(ValenceArousalSpace.create_chart(self._cnn_va, self._rnn_va), (0., .3), (.5, .33))
-        frame.add(self.analyst.create_va_chart(), (0, .66), (.5, .33))
-        frame.add(self.analyst.create_valence_average_chart(), (.5, 0), (.5, .5))
-        frame.add(self.analyst.create_arousal_average_chart(), (.5, .5), (.5, .5))
+        try:
+            frame.add(self.analyst.create_va_chart(), (0, .66), (.5, .33))
+            frame.add(self.analyst.create_valence_average_chart(), (.5, 0), (.5, .5))
+            frame.add(self.analyst.create_arousal_average_chart(), (.5, .5), (.5, .5))
+        except (IndexError, ValueError):
+            pass
         frame.show()
 
     def log_predictions(self):

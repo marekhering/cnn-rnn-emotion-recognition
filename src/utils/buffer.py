@@ -11,8 +11,8 @@ _T = tp.TypeVar('_T')
 
 
 class Buffer(tp.Generic[_T]):
-    def __init__(self):
-        self.__deque = deque(maxlen=GeneralConfig.MAX_BUFFER_SIZE)
+    def __init__(self, max_len: int = GeneralConfig.MAX_BUFFER_SIZE):
+        self.__deque = deque(maxlen=max_len)
 
     def __getitem__(self, item):
         return self.__deque[item]
@@ -25,6 +25,12 @@ class Buffer(tp.Generic[_T]):
 
     def np(self):
         return np.array(self.__deque)
+
+    def is_empty(self):
+        return len(self) == 0
+
+    def __len__(self):
+        return len(self.__deque)
 
     def __repr__(self):
         return self.__deque.__repr__()
