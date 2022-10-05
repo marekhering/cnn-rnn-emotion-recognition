@@ -1,4 +1,6 @@
 import typing as tp
+from datetime import timedelta
+
 import cv2
 from pathlib import Path
 
@@ -15,9 +17,12 @@ class VideoHandler:
 
         self.__video = None
         self.__source = source
+        self.__fps = None
+        self.frame_counter = 0
 
     def __enter__(self):
         self.__video = cv2.VideoCapture(self.__source)
+        self.__fps = self.__video.get(cv2.CAP_PROP_FPS)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -25,7 +30,9 @@ class VideoHandler:
         cv2.destroyAllWindows()
 
     def read_video_frame(self) -> np.ndarray:
+        self.frame_counter += 1
         ret, frame = self.__video.read()
-        if not ret:
-            raise ValueError(f"Cannot read video from source {self.__source}")
-        return frame
+        return frame if ret else None
+
+    def get_frame_time(self):
+        return timedelta(seconds=self.frame_counter / self.__fps)

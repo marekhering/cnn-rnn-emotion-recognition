@@ -1,53 +1,75 @@
+import json
+import os
 import typing as tp
-import numpy as np
+from datetime import timedelta
+from pathlib import Path
+
 import cv2
+import numpy as np
 
 from .analysis import Analyst
 from .models import CNNModel, RNNModel
-from .utils import ValenceArousal
+from .utils import ValenceArousal, Buffer
 from .vis import VideoHandler, Frame, ValenceArousalSpace
 from config import PathConfig, GeneralConfig, FrameConfig
 
 
 class App:
     def __init__(self):
-        self.analyst = Analyst()
         self.cnn_model = CNNModel(PathConfig.CNN_MODEL_PATH)
         self.rnn_model = RNNModel(PathConfig.RNN_MODEL_PATH)
         self.face_detection_model = cv2.CascadeClassifier(PathConfig.FACE_RECOGNITION_MODEL_PATH)
         self._reset_attributes()
 
     def _reset_attributes(self):
+        self.analyst = Analyst()
         self._feature_buffer = []
         self._cnn_va = ValenceArousal()
         self._rnn_va = ValenceArousal()
 
-    def visualize_inference(self, source: tp.Union[str, int]):
+    def videos_inference(self):
+        for file_name in os.listdir(PathConfig.VIDEOS_PATH):
+            source = os.path.join(PathConfig.VIDEOS_PATH, file_name)
+            self.video_inference(source, vis=False)
+
+    def video_inference(self, source: tp.Union[str, int], vis: bool = True, save: bool = True):
         self._reset_attributes()
         with VideoHandler(source) as video_handler:
-            while True:
-                video_frame = video_handler.read_video_frame()
+            while (video_frame := video_handler.read_video_frame()) is not None:
                 face_img = self._find_face(video_frame)
                 prepared_img = self._prepare_img(face_img)
-
                 self._inference_feature_extractor(prepared_img)
                 rnn_run = self._inference_rnn_model()
                 self._inference_classification_model()
+                self.log_predictions(source, video_handler.get_frame_time())
 
                 if rnn_run:
-                    self.analyst.add_inference_result(self._rnn_va)
+                    self.analyst.add_inference_result(self._rnn_va, video_handler.get_frame_time())
 
-                self.log_predictions()
-                self._visualize(video_frame, prepared_img)
+                if vis:
+                    self._visualize(video_frame, prepared_img)
+
                 if self.listen_for_quit_button():
                     break
+        if save:
+            self.save_output(source)
 
-    def inference_image(self, image_path: str):
+    def save_output(self, source: str):
+        output_dir = Path(PathConfig.OUTPUT_VIDEOS)
+        output_dir.mkdir(exist_ok=True, parents=True)
+        # Get file from path, change existing extension to .json
+        output_file = f'{os.path.split(source)[1].split(".")[0]}.json'
+        output_file = os.path.join(output_dir, output_file)
+        with open(output_file, 'w') as f:
+            json.dump(self.analyst.troubles, f)
+
+    def image_inference(self, image_path: str):
+        self._reset_attributes()
         img = cv2.imread(image_path)
         prepared_img = self._prepare_img(img)
         self._inference_feature_extractor(prepared_img)
         self._inference_classification_model()
-        self.log_predictions()
+        self.log_predictions(image_path)
 
     def _find_face(self, frame: np.ndarray) -> np.ndarray:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -96,8 +118,10 @@ class App:
             pass
         frame.show()
 
-    def log_predictions(self):
-        print(f"CNN: {self._cnn_va}   RNN: {self._rnn_va}")
+    def log_predictions(self, source: tp.Union[str, int], _time: timedelta = None):
+        print(f"Source: {source} time: {str(_time)[:12].ljust(8, '.').ljust(12, '0') if _time is not None else ''} | "
+              f"CNN: {self._cnn_va}   RNN: {self._rnn_va} "
+              f"Detected Trobules: {self.analyst.troubles}")
 
     @staticmethod
     def listen_for_quit_button() -> bool:
