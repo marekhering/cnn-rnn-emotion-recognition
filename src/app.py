@@ -113,15 +113,15 @@ class App:
         try:
             frame.add(self.analyst.create_va_chart(), (0, .66), (.5, .33))
             frame.add(self.analyst.create_valence_average_chart(), (.5, 0), (.5, .5))
-            frame.add(self.analyst.create_arousal_average_chart(), (.5, .5), (.5, .5))
+            frame.add(self.analyst.create_derivative_chart(), (.5, .5), (.5, .5))
         except (IndexError, ValueError):
             pass
         frame.show()
 
     def log_predictions(self, source: tp.Union[str, int], _time: timedelta = None):
         print(f"Source: {source} time: {str(_time)[:12].ljust(8, '.').ljust(12, '0') if _time is not None else ''} | "
-              f"CNN: {self._cnn_va}   RNN: {self._rnn_va} "
-              f"Detected Troubles: {self.analyst.troubles}")
+              f"RNN: {self._rnn_va} "
+              f"Detected Troubles: {[f'{tr.name}: {ti}' for tr, ti in self.analyst.troubles]}")
 
     @staticmethod
     def listen_for_quit_button() -> bool:

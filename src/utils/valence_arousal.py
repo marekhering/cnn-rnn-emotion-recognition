@@ -9,18 +9,18 @@ class ValenceArousal(tp.List):
         self.__valence = valence
         self.__arousal = arousal
 
-    def __add__(self, other: ValenceArousal):
+    def __add__(self, other: ValenceArousal) -> ValenceArousal:
         return ValenceArousal(self.__valence + other.__valence, self.__arousal + other.__arousal)
 
-    def __sub__(self, other: ValenceArousal):
+    def __sub__(self, other: ValenceArousal) -> ValenceArousal:
         return ValenceArousal(self.__valence - other.__valence, self.__arousal - other.__arousal)
 
-    def __mul__(self, other: float):
+    def __mul__(self, other: float) -> ValenceArousal:
         if isinstance(other, ValenceArousal):
             return ValenceArousal(self.__valence * other.__valence, self.__arousal * other.__arousal)
         return ValenceArousal(self.__valence * other, self.__arousal * other)
 
-    def __truediv__(self, other: float):
+    def __truediv__(self, other: float) -> ValenceArousal:
         return ValenceArousal(self.__valence / other, self.__arousal / other)
 
     @property
