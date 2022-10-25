@@ -28,7 +28,7 @@ class App:
         self._rnn_va = ValenceArousal()
 
     def videos_inference(self):
-        for file_name in os.listdir(PathConfig.VIDEOS_PATH):
+        for file_name in sorted(os.listdir(PathConfig.VIDEOS_PATH)):
             source = os.path.join(PathConfig.VIDEOS_PATH, file_name)
             self.video_inference(source, vis=False)
 
@@ -121,7 +121,7 @@ class App:
     def log_predictions(self, source: tp.Union[str, int], _time: timedelta = None):
         print(f"Source: {source} time: {str(_time)[:12].ljust(8, '.').ljust(12, '0') if _time is not None else ''} | "
               f"CNN: {self._cnn_va}   RNN: {self._rnn_va} "
-              f"Detected Trobules: {self.analyst.troubles}")
+              f"Detected Troubles: {self.analyst.troubles}")
 
     @staticmethod
     def listen_for_quit_button() -> bool:

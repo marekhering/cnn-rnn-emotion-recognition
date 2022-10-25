@@ -23,6 +23,7 @@ class VideoHandler:
     def __enter__(self):
         self.__video = cv2.VideoCapture(self.__source)
         self.__fps = self.__video.get(cv2.CAP_PROP_FPS)
+        self.__fps = self.__fps if not math.isnan(self.__fps) else 20
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
