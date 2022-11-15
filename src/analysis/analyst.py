@@ -28,6 +28,9 @@ class Analyst:
         self.__va_variance_global_buffer = Buffer()
         self.__va_std_global_buffer = Buffer()
 
+        # # Sigmoid deviation activator
+        self.__va_std_sigmoid_buffer = Buffer()
+
         # Rapid deprecation activator
         self.__derivative_buffer = Buffer()
         self.__derivative_moving_average = Buffer()
@@ -46,6 +49,9 @@ class Analyst:
         self.__va_mean_global_buffer.append(self.va_mean())
         self.__va_variance_global_buffer.append(self.va_variance())
         self.__va_std_global_buffer.append(self.va_std())
+
+        # # Sigmoid deviation activator
+        self.__va_std_sigmoid_buffer.append(self.sigmoid(self.__va_buffer.np().std(axis=0)))
 
         # Rapid deprecation activator
         self.__derivative_buffer.append(self.derivative())
@@ -68,8 +74,9 @@ class Analyst:
                     self.troubles.append((activator, str(_time)))
                     self.__last_deviation_read = self.__number_of_reads
 
-        find_deviation_trouble(self.global_deviation_threshold(), Activator.global_deviation)
-        find_deviation_trouble(self.local_deviation_threshold(), Activator.local_deviation)
+        find_deviation_trouble(self.deviation_threshold(self.__va_std_global_buffer), Activator.global_deviation)
+        find_deviation_trouble(self.deviation_threshold(self.__va_std_local_buffer), Activator.local_deviation)
+        find_deviation_trouble(self.deviation_threshold(self.__va_std_sigmoid_buffer), Activator.sigmoid_deviation)
 
         # Looking for deprecation troubles
         if self.is_intersection(self.__derivative_moving_average.np()[:, 0], self.__derivative_threshold.np()):
@@ -99,16 +106,17 @@ class Analyst:
     def va_std(self):
         return np.sqrt(self.va_variance())
 
-    def local_deviation_threshold(self):
-        return self.__va_mean_local_buffer.np() - (self.__va_std_local_buffer.np() * AnalysisConing.STD_SENSITIVITY)
-
-    def global_deviation_threshold(self):
-        return self.__va_mean_global_buffer.np() - (self.__va_std_global_buffer.np() * AnalysisConing.STD_SENSITIVITY)
+    def deviation_threshold(self, std_buffer: Buffer):
+        return self.__va_mean_local_buffer.np() - (std_buffer.np() * AnalysisConing.STD_SENSITIVITY)
 
     def derivative(self):
         if len(self.__va_buffer) < 2:
             return ValenceArousal(0, 0)
         return self.__va_buffer[-1] - self.__va_buffer[-2]
+
+    @staticmethod
+    def sigmoid(x: np.ndarray):
+        return (2 / (1 + np.exp((-x) * 2.2))) - 1
 
     def derivative_moving_average(self, window_size: int):
         return np.mean(self.__derivative_buffer.last(window_size), axis=0)
@@ -140,8 +148,9 @@ class Analyst:
         return self.__create_analysis_chart([
             (self.__va_buffer.np()[:, 0], "Valence"),
             (self.__va_moving_average.np()[:, 0], "10 period average"),
-            (self.global_deviation_threshold()[:, 0], "Global threshold"),
-            (self.local_deviation_threshold()[:, 0], "Local threshold")
+            (self.deviation_threshold(self.__va_std_global_buffer)[:, 0], "Global threshold"),
+            (self.deviation_threshold(self.__va_std_local_buffer)[:, 0], "Local threshold"),
+            (self.deviation_threshold(self.__va_std_sigmoid_buffer)[:, 0], "Sigmoid threshold"),
         ], "Deviation detection")
 
     def create_deprecation_chart(self):
