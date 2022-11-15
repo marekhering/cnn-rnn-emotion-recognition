@@ -71,12 +71,12 @@ class App:
         self._inference_classification_model()
         self.log_predictions(image_path)
 
-    def _find_face(self, frame: np.ndarray) -> np.ndarray:
+    def _find_face(self, frame: np.ndarray, b: int = 10) -> np.ndarray:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = self.face_detection_model.detectMultiScale(gray, 1.1, 4)
         if len(faces) > 0:
             x, y, w, h = faces[0]
-            return frame[y: y + h, x: x + w]
+            return frame[y - b: y + h + b, x - b: x + w + b]
         return np.zeros((1, 1, 3), dtype=np.uint8)
 
     def _prepare_img(self, img: np.ndarray) -> np.ndarray:
