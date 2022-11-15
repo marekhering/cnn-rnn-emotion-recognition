@@ -112,9 +112,9 @@ class App:
         frame.add(ValenceArousalSpace.create_chart(self._cnn_va, self._rnn_va), (0., .3), (.5, .33))
         try:
             frame.add(self.analyst.create_va_chart(), (0, .66), (.5, .33))
-            frame.add(self.analyst.create_valence_average_chart(), (.5, 0), (.5, .5))
-            frame.add(self.analyst.create_derivative_chart(), (.5, .5), (.5, .5))
-        except (IndexError, ValueError):
+            frame.add(self.analyst.create_deviation_chart(), (.5, 0), (.5, .5))
+            frame.add(self.analyst.create_deprecation_chart(), (.5, .5), (.5, .5))
+        except (IndexError, ValueError) as e:
             pass
         frame.show()
 

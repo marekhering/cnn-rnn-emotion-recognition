@@ -1,6 +1,6 @@
 class GeneralConfig:
     DEFAULT_QUIT_BUTTON = 'q'
-    MAX_BUFFER_SIZE = 150
+    MAX_BUFFER_SIZE = 1000
     DEFAULT_FPS = 30
     REQUIRED_FPS = 10
 
@@ -15,7 +15,7 @@ class PathConfig:
 
 
 class FrameConfig:
-    MAIN_FRAME_SIZE = (800, 1200)
+    MAIN_FRAME_SIZE = (900, 1500)
     FRAME_BACKGROUND = (255, 255, 255)
 
 
