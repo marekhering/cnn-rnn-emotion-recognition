@@ -58,10 +58,18 @@ class App:
         output_dir = Path(PathConfig.OUTPUT_VIDEOS)
         output_dir.mkdir(exist_ok=True, parents=True)
         # Get file from path, change existing extension to .json
-        output_file = f'{os.path.split(source)[1].split(".")[0]}.json'
+        output_file = f'{os.path.split(source)[1].split(".")[0]}.txt'
         output_file = os.path.join(output_dir, output_file)
         with open(output_file, 'w') as f:
-            json.dump(self.analyst.troubles, f)
+            f.write(self.intersections_as_boris_format())
+
+    def intersections_as_boris_format(self):
+        boris_format = []
+        for _time, activator in self.analyst.intersections:
+            boris_time = str(_time.total_seconds()).split('.')
+            boris_time = f"{boris_time[0]}.{boris_time[1][:3]}"
+            boris_format.append("\t".join([f"{boris_time}", "", f"{activator.name}", "", ""]))
+        return "\n".join(boris_format)
 
     def image_inference(self, image_path: str):
         self._reset_attributes()
@@ -121,7 +129,7 @@ class App:
     def log_predictions(self, source: tp.Union[str, int], _time: timedelta = None):
         print(f"Source: {source} time: {str(_time)[:12].ljust(8, '.').ljust(12, '0') if _time is not None else ''} | "
               f"RNN: {self._rnn_va} "
-              f"Detected Troubles: {[f'{tr.name}: {ti}' for tr, ti in self.analyst.troubles]}")
+              f"Detected Troubles: {[f'{ti}: {act.name}' for ti, act in self.analyst.intersections]}")
 
     @staticmethod
     def listen_for_quit_button() -> bool:

@@ -13,7 +13,7 @@ class Analyst:
     def __init__(self):
         self.__va_buffer = Buffer()
         self.__number_of_reads = 0
-        self.troubles: tp.List[tp.Tuple[Activator, str]] = []
+        self.intersections: tp.List[tp.Tuple[timedelta, Activator]] = []
 
         # Deviation activators
         self.__va_moving_average = Buffer()
@@ -70,35 +70,38 @@ class Analyst:
         self.__global_derivative_std.append(self.va_std(self.__global_derivative_variance))
 
         self.__number_of_reads += 1
-        self.__find_troubles(_time)
+        self.__find_intersections(_time)
 
-    def __find_troubles(self, _time: timedelta):
-        if _time < timedelta(seconds=AnalysisConing.DELAY):
-            return
+    def __find_intersections(self, _time: timedelta):
+        def add_intersect(data_line, control_line, activator):
+            if self.is_intersection(data_line, control_line):
+                self.intersections.append((_time, activator))
 
-        # Looking for deviation troubles
-        def find_deviation_trouble(threshold: np.ndarray, activator: Activator):
-            n = AnalysisConing.LONG_TERM_TROUBLE_LENGTH
-            delta_values = (self.__va_moving_average.np() - threshold)[-n:, 0]
-            if self.__number_of_reads - self.__last_deviation_read > AnalysisConing.LONG_TERM_TROUBLE_LENGTH:
-                if (delta_values < 0).all():
-                    self.troubles.append((activator, str(_time)))
-                    self.__last_deviation_read = self.__number_of_reads
+        # Data lines
+        deviation_line = self.__va_moving_average.np()[:, 0]
+        derivative_line = self.__derivative_moving_average.np()[:, 0]
 
-        find_deviation_trouble(self.deviation_threshold(self.__va_std_global_buffer), Activator.global_deviation)
-        find_deviation_trouble(self.deviation_threshold(self.__va_std_local_buffer), Activator.local_deviation)
-        find_deviation_trouble(self.sigmoid_threshold(self.__va_std_global_buffer), Activator.sigmoid_deviation)
-        find_deviation_trouble(self.sigmoid_threshold(self.__va_std_local_buffer), Activator.sigmoid_deviation)
+        # Control lines
+        global_v_std = self.deviation_threshold(self.__va_std_global_buffer)[:, 0]
+        local_v_std = self.deviation_threshold(self.__va_std_local_buffer)[:, 0]
+        s_global_v_std = self.sigmoid_threshold(self.__va_std_global_buffer)[:, 0]
+        s_local_v_std = self.sigmoid_threshold(self.__va_std_local_buffer)[:, 0]
+        global_v_dv_std = self.derivative_threshold(self.__global_derivative_std)[:, 0]
+        local_v_dv_std = self.derivative_threshold(self.__local_derivative_std)[:, 0]
 
-        # Looking for deprecation troubles
-        if self.is_intersection(self.__derivative_moving_average.np()[:, 0],
-                                self.derivative_threshold(self.__local_derivative_std)[:, 0]):
-            self.troubles.append((Activator.local_rapid_deprecation, str(_time)))
+        # Intersections from above
+        add_intersect(deviation_line, global_v_std, Activator.global_deviation)
+        add_intersect(deviation_line, local_v_std, Activator.local_deviation)
+        add_intersect(deviation_line, s_global_v_std, Activator.sigmoid_deviation)
+        add_intersect(deviation_line, s_local_v_std, Activator.sigmoid_deviation)
+        add_intersect(derivative_line, global_v_dv_std, Activator.global_rapid_deprecation)
+        add_intersect(derivative_line, local_v_dv_std, Activator.local_rapid_deprecation)
 
-        if self.is_intersection(self.__derivative_moving_average.np()[:, 0],
-                                self.derivative_threshold(self.__global_derivative_std)[:, 0]):
-            self.troubles.append((Activator.global_rapid_deprecation, str(_time)))
-
+        # Intersections from bottom
+        add_intersect(global_v_std, deviation_line, Activator.global_deviation)
+        add_intersect(local_v_std, deviation_line, Activator.local_deviation)
+        add_intersect(s_global_v_std, deviation_line, Activator.sigmoid_deviation)
+        add_intersect(s_local_v_std, deviation_line, Activator.sigmoid_deviation)
 
     def va_moving_average(self, window_size: int):
         return np.mean(self.__va_buffer.last(window_size), axis=0)
