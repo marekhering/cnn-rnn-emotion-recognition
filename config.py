@@ -1,8 +1,8 @@
 class GeneralConfig:
     DEFAULT_QUIT_BUTTON = 'q'
-    MAX_BUFFER_SIZE = 1000
+    MAX_BUFFER_SIZE = 200
     DEFAULT_FPS = 30
-    REQUIRED_FPS = 10
+    REQUIRED_FPS = 20
 
 
 class PathConfig:
@@ -20,7 +20,6 @@ class FrameConfig:
 
 
 class AnalysisConing:
-    DELAY = 20  # seconds
+    DELAY = 5  # seconds
     STD_SENSITIVITY = 1.7  # Value refers to the multiplier for the standard deviation
     LONG_TERM_TROUBLE_LENGTH = 50  # The length of negative abnormal valence to be classified as trouble
-    DERIVATIVE_SENSITIVITY = -0.005  # Threshold for short term trouble detection
