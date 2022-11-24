@@ -1,4 +1,3 @@
-import json
 import os
 import typing as tp
 from datetime import timedelta
@@ -68,7 +67,7 @@ class App:
         for _time, activator in self.analyst.intersections:
             boris_time = str(_time.total_seconds()).split('.')
             boris_time = f"{boris_time[0]}.{boris_time[1][:3]}"
-            boris_format.append("\t".join([f"{boris_time}", "", f"{activator.name}", "", ""]))
+            boris_format.append("\t".join([f"{boris_time}", "", f"{activator.name}", "", "foo"]))
         return "\n".join(boris_format)
 
     def image_inference(self, image_path: str):
