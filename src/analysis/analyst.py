@@ -1,4 +1,6 @@
+import itertools
 import typing as tp
+from collections import defaultdict
 from datetime import timedelta
 
 import numpy as np
@@ -13,7 +15,7 @@ class Analyst:
     def __init__(self):
         self._va_buffer = Buffer()
         self._number_of_reads = 0
-        self.intersections: tp.List[tp.Tuple[timedelta, Activator]] = []
+        self._intersections: tp.Dict[Activator, tp.List[timedelta]] = defaultdict(list)
 
         # Deviation activators
         self._va_moving_average = Buffer()
@@ -40,6 +42,11 @@ class Analyst:
         self._global_derivative_mean = Buffer()
         self._global_derivative_variance = Buffer()
         self._global_derivative_std = Buffer()
+
+    @property
+    def intersections(self) -> tp.List[tp.Tuple[timedelta, Activator]]:
+        # Unpack Activator to make list of Activator, time tuple
+        return list(itertools.chain(*[[(t, act) for t in times] for act, times in self._intersections.items()]))
 
     def add_inference_result(self, valence_arousal: ValenceArousal, _time: timedelta):
         self._va_buffer.append(valence_arousal)
@@ -70,15 +77,16 @@ class Analyst:
         self._global_derivative_std.append(self.va_std(self._global_derivative_variance))
 
         self._number_of_reads += 1
-        self.__find_intersections(_time)
+        self.find_intersections(_time)
 
-    def __find_intersections(self, _time: timedelta):
-        # if _time.total_seconds() < AnalysisConing.DELAY:
-        #     return
+    def find_intersections(self, _time: timedelta):
+        if _time.total_seconds() < AnalysisConing.DELAY:
+            return
 
-        def add_intersect(data_line, control_line, activator):
-            if self.is_intersection(data_line, control_line):
-                self.intersections.append((_time, activator))
+        def add_intersect(data_line, control_line, activator, check_oddity: bool = False):
+            if not check_oddity or len(self._intersections[activator]) % 2 == 1:
+                if self.is_intersection(data_line, control_line):
+                    self._intersections[activator].append(_time)
 
         # Data lines
         deviation_line = self._va_moving_average.np()[:, 0]
@@ -101,10 +109,10 @@ class Analyst:
         add_intersect(derivative_line, local_v_dv_std, Activator.local_rapid_deprecation)
 
         # Intersections from bottom
-        add_intersect(global_v_std, deviation_line, Activator.global_deviation)
-        add_intersect(local_v_std, deviation_line, Activator.local_deviation)
-        add_intersect(s_global_v_std, deviation_line, Activator.global_sigmoid_deviation)
-        add_intersect(s_local_v_std, deviation_line, Activator.local_sigmoid_deviation)
+        add_intersect(global_v_std, deviation_line, Activator.global_deviation, True)
+        add_intersect(local_v_std, deviation_line, Activator.local_deviation, True)
+        add_intersect(s_global_v_std, deviation_line, Activator.global_sigmoid_deviation, True)
+        add_intersect(s_local_v_std, deviation_line, Activator.local_sigmoid_deviation, True)
 
     def va_moving_average(self, window_size: int):
         return np.mean(self._va_buffer.last(window_size), axis=0)
