@@ -25,6 +25,7 @@ class App:
         self._feature_buffer = []
         self._cnn_va = ValenceArousal()
         self._rnn_va = ValenceArousal()
+        self._face_position = None
 
     def videos_inference(self):
         for file_name in sorted(os.listdir(PathConfig.VIDEOS_PATH)):
@@ -79,12 +80,30 @@ class App:
         self.log_predictions(image_path)
 
     def _find_face(self, frame: np.ndarray, b: int = 10) -> np.ndarray:
+        """
+        Method that finds face in given frame.
+        :param frame: whole image
+        :param b: additional border in found face frame
+        :return: position of probably face as tuple of x, y, width, height
+        """
+        def manhattan_dist(_p1: tp.Tuple[int, int], _p2: tp.Tuple[int, int]):
+            return abs(_p1[0] - _p2[0]) + abs(_p1[1] - _p2[1])
+
+        def get_middle(_x: tp.List):
+            return _x[0] + _x[2] / 2, _x[1] + _x[3] / 2
+
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = self.face_detection_model.detectMultiScale(gray, 1.1, 4)
+        faces = self.face_detection_model.detectMultiScale(gray, 1.3, 5, flags=cv2.CASCADE_SCALE_IMAGE)
         if len(faces) > 0:
-            x, y, w, h = faces[0]
+            reference_point = get_middle([0, 0, *frame.shape] if self._face_position is None else self._face_position)
+            closest = min(faces, key=lambda _f: manhattan_dist(reference_point, (get_middle(_f))))
+            self._face_position = closest if self._face_position is None else (closest + self._face_position) // 2
+
+        if self._face_position is not None:
+            x, y, w, h = self._face_position
             return frame[y - b: y + h + b, x - b: x + w + b]
-        return np.zeros((1, 1, 3), dtype=np.uint8)
+        else:
+            return np.zeros((1, 1, 3), dtype=np.uint8)
 
     def _prepare_img(self, img: np.ndarray) -> np.ndarray:
         resized_img = cv2.resize(img, self.cnn_model.image_shape)
