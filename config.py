@@ -1,6 +1,6 @@
 class GeneralConfig:
     DEFAULT_QUIT_BUTTON = 'q'
-    MAX_BUFFER_SIZE = 200
+    MAX_BUFFER_SIZE = 600
     DEFAULT_FPS = 30
     REQUIRED_FPS = 20
 
@@ -20,6 +20,6 @@ class FrameConfig:
 
 
 class AnalysisConing:
-    DELAY = 5  # seconds
-    STD_SENSITIVITY = 1.7  # Value refers to the multiplier for the standard deviation
+    DELAY = 30  # seconds
+    STD_SENSITIVITY = 1.9  # Value refers to the multiplier for the standard deviation
     LONG_TERM_TROUBLE_LENGTH = 50  # The length of negative abnormal valence to be classified as trouble

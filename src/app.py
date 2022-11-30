@@ -1,6 +1,8 @@
+import logging
 import os
 import typing as tp
 from datetime import timedelta
+from functools import reduce
 from pathlib import Path
 
 import cv2
@@ -27,10 +29,14 @@ class App:
         self._rnn_va = ValenceArousal()
         self._face_position = None
 
-    def videos_inference(self):
-        for file_name in sorted(os.listdir(PathConfig.VIDEOS_PATH)):
+    def videos_inference(self, shift: int = 0):
+        for file_name in sorted(os.listdir(PathConfig.VIDEOS_PATH))[shift:]:
             source = os.path.join(PathConfig.VIDEOS_PATH, file_name)
-            self.video_inference(source, vis=False)
+            try:
+                self.video_inference(source, vis=False)
+            except Exception as e:
+                logging.exception(f"Analysis of {source} failed due to some errors")
+                self.save_output(source, str(e))
 
     def video_inference(self, source: tp.Union[str, int], vis: bool = True, save: bool = True):
         self._reset_attributes()
@@ -52,16 +58,17 @@ class App:
                 if self.listen_for_quit_button():
                     break
         if save:
-            self.save_output(source)
+            self.save_output(source, self.intersections_as_boris_format())
 
-    def save_output(self, source: str):
+    @staticmethod
+    def save_output(source: str, _txt: str):
         output_dir = Path(PathConfig.OUTPUT_VIDEOS)
         output_dir.mkdir(exist_ok=True, parents=True)
         # Get file from path, change existing extension to .json
         output_file = f'{os.path.split(source)[1].split(".")[0]}.txt'
         output_file = os.path.join(output_dir, output_file)
         with open(output_file, 'w') as f:
-            f.write(self.intersections_as_boris_format())
+            f.write(_txt)
 
     def intersections_as_boris_format(self):
         boris_format = []
@@ -79,7 +86,7 @@ class App:
         self._inference_classification_model()
         self.log_predictions(image_path)
 
-    def _find_face(self, frame: np.ndarray, b: int = 10) -> np.ndarray:
+    def _find_face(self, frame: np.ndarray, b: int = 20) -> np.ndarray:
         """
         Method that finds face in given frame.
         :param frame: whole image
@@ -101,7 +108,11 @@ class App:
 
         if self._face_position is not None:
             x, y, w, h = self._face_position
-            return frame[y - b: y + h + b, x - b: x + w + b]
+            x1 = max(x - b, 0)
+            y1 = max(y - b, 0)
+            x2 = min(x + w + b, frame.shape[1])
+            y2 = min(y + h + b, frame.shape[0])
+            return frame[y1: y2, x1: x2]
         else:
             return np.zeros((1, 1, 3), dtype=np.uint8)
 
