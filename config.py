@@ -10,6 +10,7 @@ class PathConfig:
     RNN_MODEL_PATH = 'data/models/gru_ccc_loss-epoch_17-loss_0.6913-ccc_v_0.2252-ccc_a_0.3922.hdf5'
     VALENCE_AROUSAL_SPACE_PATH = 'data/utils/valence_arousal_space.jpg'
     FACE_RECOGNITION_MODEL_PATH = 'data/models/haarcascade_frontalface_default.xml'
+    VIDEOS_LINKS = 'data/utils/links.txt'
     VIDEOS_PATH = 'data/input/videos'
     OUTPUT_VIDEOS = 'data/output/videos'
 
