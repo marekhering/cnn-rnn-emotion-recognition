@@ -1,3 +1,6 @@
+from pathlib import Path
+
+
 class GeneralConfig:
     DEFAULT_QUIT_BUTTON = 'q'
     MAX_BUFFER_SIZE = 600
@@ -15,6 +18,10 @@ class PathConfig:
     VIDEOS_PATH = 'data/input/videos'
     OUTPUT_VIDEOS_PATH = 'data/output/videos'
     PLOTS_PATH = 'data/plots'
+
+    @staticmethod
+    def mkdir(_path: str):
+        Path(_path).mkdir(parents=True, exist_ok=True)
 
 
 class FrameConfig:

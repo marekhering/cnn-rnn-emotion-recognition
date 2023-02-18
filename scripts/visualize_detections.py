@@ -58,6 +58,7 @@ def load_predicted_labels():
 
 
 def plot_detections(grand_truth_by_file_id: tp.Dict, predicted: tp.Dict):
+    PathConfig.mkdir(PathConfig.PLOTS_PATH)
     for file_id, predictions in tqdm(list(predicted.items()), desc="Plotting..."):
         fig = plt.gcf()
         fig.set_size_inches(28.5, 10.5)
