@@ -2,7 +2,6 @@ import logging
 import os
 import typing as tp
 from datetime import timedelta
-from functools import reduce
 from pathlib import Path
 
 import cv2
@@ -62,7 +61,7 @@ class App:
 
     @staticmethod
     def save_output(source: str, _txt: str):
-        output_dir = Path(PathConfig.OUTPUT_VIDEOS)
+        output_dir = Path(PathConfig.OUTPUT_VIDEOS_PATH)
         output_dir.mkdir(exist_ok=True, parents=True)
         # Get file from path, change existing extension to .json
         output_file = f'{os.path.split(source)[1].split(".")[0]}.txt'
@@ -114,7 +113,7 @@ class App:
             y2 = min(y + h + b, frame.shape[0])
             return frame[y1: y2, x1: x2]
         else:
-            return np.zeros((1, 1, 3), dtype=np.uint8)
+            return frame
 
     def _prepare_img(self, img: np.ndarray) -> np.ndarray:
         resized_img = cv2.resize(img, self.cnn_model.image_shape)
