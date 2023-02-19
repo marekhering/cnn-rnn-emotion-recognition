@@ -2,6 +2,7 @@ import os
 import typing as tp
 from collections import defaultdict
 
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -18,7 +19,7 @@ POINTS_EVENT_TIME = 1
 
 def load_ground_truth_labels():
     labeled_emotions = defaultdict(list)
-    for filename in tqdm(os.listdir(PathConfig.EVAL_VIDEOS_PATH), desc="Load ground truth labels"):
+    for filename in tqdm(os.listdir(PathConfig.EVAL_VIDEOS_PATH), desc="Loading ground truth labels"):
         filename_split = filename.split('_PLAYER1_')
         file_id = filename_split[0].replace('-zgoda', '')
         emotion, seconds = filename_split[1][:-4].split("_")[1:]
@@ -28,13 +29,27 @@ def load_ground_truth_labels():
     return dict(labeled_emotions)
 
 
+def load_info() -> tp.Dict:
+    info = {}
+    for filename in tqdm(os.listdir(PathConfig.VIDEOS_PATH), desc="Getting videos info"):
+        filepath = f"{PathConfig.VIDEOS_PATH}/{filename}"
+        filename_split = filename.split("_")
+        file_id = f"{filename_split[0]}_{filename_split[1][0]}"
+        video = cv2.VideoCapture(filepath)
+        fps = video.get(cv2.CAP_PROP_FPS)
+        frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
+        duration = frame_count / fps
+        info[file_id] = (duration, frame_count, fps)
+    return info
+
+
 def load_predicted_labels():
     def convert_line(_line: str):
         _line_split = _line.split("\t\t")
         return float(_line_split[0]), _line_split[1]
 
     detections = {}
-    for filename in tqdm(os.listdir(PathConfig.OUTPUT_VIDEOS_PATH), desc="Load predicted labels"):
+    for filename in tqdm(os.listdir(PathConfig.OUTPUT_VIDEOS_PATH), desc="Loading predicted labels"):
         with open(f"{PathConfig.OUTPUT_VIDEOS_PATH}/{filename}") as f:
             lines = f.readlines()
 
@@ -71,17 +86,20 @@ def load_valence_arousal():
     return valence, arousal
 
 
-def plot_detections(grand_truth_by_file_id: tp.Dict, predicted: tp.Dict, valence: tp.Dict, arousal: tp.Dict):
+def plot_detections(grand_truth_by_file_id: tp.Dict, info: tp.Dict,
+                    predicted: tp.Dict, valence: tp.Dict, arousal: tp.Dict):
     PathConfig.mkdir(PathConfig.PLOTS_PATH)
     for file_id, predictions in tqdm(list(predicted.items()), desc="Plotting..."):
         fig, (a0, a1) = plt.subplots(2, gridspec_kw={'height_ratios': [3, 1]})
         fig.set_size_inches(28.5, 10.5)
         plt.style.use("seaborn-whitegrid")
 
+        video_duration = info[file_id][0]
+
+        # A0
         # Plot label names
-        max_x = max([p[2] for p in predictions + grand_truth_by_file_id[file_id]])
         for i, label in enumerate(LABELS):
-            a0.text(max_x / 20, i + 0.5, label, horizontalalignment='center', verticalalignment='center')
+            a0.text(video_duration / 20, i + 0.5, label, horizontalalignment='center', verticalalignment='center')
 
         # Plot model predictions boxes
         for label, start_time, end_time in predictions:
@@ -103,14 +121,17 @@ def plot_detections(grand_truth_by_file_id: tp.Dict, predicted: tp.Dict, valence
             a0.text(np.mean(x1), y2[0] + 0.1, label, horizontalalignment='center', verticalalignment='center')
             bars.append((x1[0] - 20, x1[1] + 20))
 
+        a0.set_xlim(left=0, right=video_duration)
+        a0.set_xlabel("Seconds")
+
+        # A1
         # Plot valence and arousal
         a1.plot(valence[file_id], label="Valence")
         a1.plot(arousal[file_id], label="Arousal")
 
-        a0.set_xlim(left=0)
-        a1.set_xlim(left=0)
+        a1.set_xlim(left=-100, right=len(arousal[file_id]))
+        a1.set_xlabel("Frames")
         fig.suptitle(f"Predictions for {file_id}")
-        a1.set_xlabel("Seconds")
         plt.legend()
         plt.savefig(f"{PathConfig.PLOTS_PATH}/{file_id}.png")
         plt.show()
@@ -118,6 +139,7 @@ def plot_detections(grand_truth_by_file_id: tp.Dict, predicted: tp.Dict, valence
 
 if __name__ == "__main__":
     GRAND_TRUTH = load_ground_truth_labels()
+    DF_INFO = load_info()
     PREDICTED = load_predicted_labels()
     VALENCE, AROUSAL = load_valence_arousal()
-    plot_detections(GRAND_TRUTH, PREDICTED, VALENCE, AROUSAL)
+    plot_detections(GRAND_TRUTH, DF_INFO, PREDICTED, VALENCE, AROUSAL)

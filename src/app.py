@@ -65,7 +65,7 @@ class App:
         PathConfig.mkdir(PathConfig.OUTPUT_VIDEOS_PATH)
         # Get file from path, change existing extension to .json
         output_file = f"{os.path.split(source)[1].split('.')[0]}.txt"
-        output_file = f"{PathConfig.OUTPUT_VIDEOS_PATH}/{output_file})"
+        output_file = f"{PathConfig.OUTPUT_VIDEOS_PATH}/{output_file}"
         with open(output_file, 'w') as f:
             f.write(_txt)
 
