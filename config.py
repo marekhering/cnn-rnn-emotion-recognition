@@ -17,6 +17,7 @@ class PathConfig:
     VIDEOS_LINKS_PATH = 'data/utils/links.txt'
     VIDEOS_PATH = 'data/input/videos'
     OUTPUT_VIDEOS_PATH = 'data/output/videos'
+    OUTPUT_VA_PATH = 'data/output/va'
     PLOTS_PATH = 'data/plots'
 
     @staticmethod

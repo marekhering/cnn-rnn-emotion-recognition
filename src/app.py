@@ -58,16 +58,23 @@ class App:
                     break
         if save:
             self.save_output(source, self.intersections_as_boris_format())
+            self.save_va(source, self.analyst.valence, self.analyst.arousal)
 
     @staticmethod
     def save_output(source: str, _txt: str):
-        output_dir = Path(PathConfig.OUTPUT_VIDEOS_PATH)
-        output_dir.mkdir(exist_ok=True, parents=True)
+        PathConfig.mkdir(PathConfig.OUTPUT_VIDEOS_PATH)
         # Get file from path, change existing extension to .json
-        output_file = f'{os.path.split(source)[1].split(".")[0]}.txt'
-        output_file = os.path.join(output_dir, output_file)
+        output_file = f"{os.path.split(source)[1].split('.')[0]}.txt"
+        output_file = f"{PathConfig.OUTPUT_VIDEOS_PATH}/{output_file})"
         with open(output_file, 'w') as f:
             f.write(_txt)
+
+    @staticmethod
+    def save_va(source, valence: np.ndarray, arousal: np.ndarray):
+        PathConfig.mkdir(PathConfig.OUTPUT_VA_PATH)
+        output_file = f"{PathConfig.OUTPUT_VA_PATH}/{os.path.split(source)[1].split('.')[0]}"
+        np.savetxt(f"{output_file}_valence.txt", valence, delimiter=',')
+        np.savetxt(f"{output_file}_arousal.txt", arousal, delimiter=',')
 
     def intersections_as_boris_format(self):
         boris_format = []

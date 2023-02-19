@@ -13,6 +13,8 @@ from .activator import Activator
 
 class Analyst:
     def __init__(self):
+        self.__v = []
+        self.__a = []
         self._va_buffer = Buffer()
         self._number_of_reads = 0
         self._intersections: tp.Dict[Activator, tp.List[timedelta]] = defaultdict(list)
@@ -48,7 +50,18 @@ class Analyst:
         # Unpack Activator to make list of Activator, time tuple
         return list(itertools.chain(*[[(t, act) for t in times] for act, times in self._intersections.items()]))
 
+    @property
+    def valence(self) -> np.ndarray:
+        return np.array(self.__v)
+
+    @property
+    def arousal(self) -> np.ndarray:
+        return np.array(self.__a)
+
     def add_inference_result(self, valence_arousal: ValenceArousal, _time: timedelta):
+        self.__v.append(valence_arousal.valence)
+        self.__a.append(valence_arousal.arousal)
+
         self._va_buffer.append(valence_arousal)
         # Deviation activators
         self._va_moving_average.append(self.va_moving_average(10))

@@ -57,17 +57,31 @@ def load_predicted_labels():
     return detections
 
 
-def plot_detections(grand_truth_by_file_id: tp.Dict, predicted: tp.Dict):
+def load_valence_arousal():
+    valence, arousal = {}, {}
+    for filename in os.listdir(PathConfig.OUTPUT_VA_PATH):
+        data = np.loadtxt(f"{PathConfig.OUTPUT_VA_PATH}/{filename}")
+        filename = filename.split(".")[0]
+        filename_split = filename.split("_")
+        file_id = f"{filename_split[0]}_{filename_split[1][0]}"
+        if filename.endswith("arousal"):
+            arousal[file_id] = data
+        elif filename.endswith("valence"):
+            valence[file_id] = data
+    return valence, arousal
+
+
+def plot_detections(grand_truth_by_file_id: tp.Dict, predicted: tp.Dict, valence: tp.Dict, arousal: tp.Dict):
     PathConfig.mkdir(PathConfig.PLOTS_PATH)
     for file_id, predictions in tqdm(list(predicted.items()), desc="Plotting..."):
-        fig = plt.gcf()
+        fig, (a0, a1) = plt.subplots(2, gridspec_kw={'height_ratios': [3, 1]})
         fig.set_size_inches(28.5, 10.5)
         plt.style.use("seaborn-whitegrid")
 
         # Plot label names
         max_x = max([p[2] for p in predictions + grand_truth_by_file_id[file_id]])
         for i, label in enumerate(LABELS):
-            plt.text(max_x / 20, i + 0.5, label, horizontalalignment='center', verticalalignment='center')
+            a0.text(max_x / 20, i + 0.5, label, horizontalalignment='center', verticalalignment='center')
 
         # Plot model predictions boxes
         for label, start_time, end_time in predictions:
@@ -76,7 +90,7 @@ def plot_detections(grand_truth_by_file_id: tp.Dict, predicted: tp.Dict):
             y1 = [label_index + 0.05] * 2
             y2 = [label_index - 0.05 + 1] * 2
             color = cm.get_cmap('winter')((label_index + 1)/len(LABELS))
-            plt.fill_between(x1, y1, y2=y2, color=color, label=label)
+            a0.fill_between(x1, y1, y2=y2, color=color, label=label)
 
         # Plot grand truth columns
         bars = []
@@ -85,13 +99,19 @@ def plot_detections(grand_truth_by_file_id: tp.Dict, predicted: tp.Dict):
             x1 = [start_time, end_time]
             y1 = [0, 0]
             y2 = [len(LABELS) + 0.1 + (intersections_num * 0.3)] * 2
-            plt.fill_between(x1, y1, y2=y2, color="red", label=label, alpha=0.1)
-            plt.text(np.mean(x1), y2[0] + 0.1, label, horizontalalignment='center', verticalalignment='center')
+            a0.fill_between(x1, y1, y2=y2, color="red", label=label, alpha=0.1)
+            a0.text(np.mean(x1), y2[0] + 0.1, label, horizontalalignment='center', verticalalignment='center')
             bars.append((x1[0] - 20, x1[1] + 20))
 
-        plt.xlim(left=0)
-        plt.title(f"Predictions for {file_id}")
-        plt.xlabel("Seconds")
+        # Plot valence and arousal
+        a1.plot(valence[file_id], label="Valence")
+        a1.plot(arousal[file_id], label="Arousal")
+
+        a0.set_xlim(left=0)
+        a1.set_xlim(left=0)
+        fig.suptitle(f"Predictions for {file_id}")
+        a1.set_xlabel("Seconds")
+        plt.legend()
         plt.savefig(f"{PathConfig.PLOTS_PATH}/{file_id}.png")
         plt.show()
 
@@ -99,4 +119,5 @@ def plot_detections(grand_truth_by_file_id: tp.Dict, predicted: tp.Dict):
 if __name__ == "__main__":
     GRAND_TRUTH = load_ground_truth_labels()
     PREDICTED = load_predicted_labels()
-    plot_detections(GRAND_TRUTH, PREDICTED)
+    VALENCE, AROUSAL = load_valence_arousal()
+    plot_detections(GRAND_TRUTH, PREDICTED, VALENCE, AROUSAL)
