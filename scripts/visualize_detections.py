@@ -9,10 +9,10 @@ from config import PathConfig
 from scripts.load_labels import load_info, load_ground_truth_labels, load_predicted_labels, load_valence_arousal, LABELS
 
 
-def plot_detections(grand_truth_by_file_id: tp.Dict, info: tp.Dict,
-                    predicted: tp.Dict, valence: tp.Dict, arousal: tp.Dict):
+def plot_detections(ground_truth_by_file_id: tp.Dict, info: tp.Dict,
+                    predictions_by_file_id: tp.Dict, valence: tp.Dict, arousal: tp.Dict):
     PathConfig.mkdir(PathConfig.PLOTS_PATH)
-    for file_id, predictions in tqdm(list(predicted.items()), desc="Plotting..."):
+    for file_id, predictions in tqdm(list(predictions_by_file_id.items()), desc="Plotting..."):
         fig, (a0, a1) = plt.subplots(2, gridspec_kw={'height_ratios': [3, 1]})
         fig.set_size_inches(28.5, 10.5)
         plt.style.use("seaborn-whitegrid")
@@ -35,7 +35,7 @@ def plot_detections(grand_truth_by_file_id: tp.Dict, info: tp.Dict,
 
         # Plot grand truth columns
         bars = []
-        for label, start_time, end_time in grand_truth_by_file_id[file_id]:
+        for label, start_time, end_time in ground_truth_by_file_id[file_id]:
             intersections_num = sum([x0 < start_time < x1 for (x0, x1) in bars])
             x1 = [start_time, end_time]
             y1 = [0, 0]
@@ -62,8 +62,8 @@ def plot_detections(grand_truth_by_file_id: tp.Dict, info: tp.Dict,
 
 
 if __name__ == "__main__":
-    GRAND_TRUTH = load_ground_truth_labels()
+    GROUND_TRUTH = load_ground_truth_labels()
     DF_INFO = load_info()
     PREDICTED = load_predicted_labels()
     VALENCE, AROUSAL = load_valence_arousal()
-    plot_detections(GRAND_TRUTH, DF_INFO, PREDICTED, VALENCE, AROUSAL)
+    plot_detections(GROUND_TRUTH, DF_INFO, PREDICTED, VALENCE, AROUSAL)

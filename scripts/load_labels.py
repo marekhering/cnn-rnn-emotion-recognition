@@ -9,8 +9,8 @@ from tqdm import tqdm
 from config import PathConfig
 
 
-POINT_EVENTS = ["local_rapid_deprecation", "global_rapid_deprecation"]
-STATE_EVENTS = ["global_deviation", "local_deviation", "global_sigmoid_deviation", "local_sigmoid_deviation"]
+POINT_EVENTS = ["global_rapid_deprecation", "local_rapid_deprecation"]
+STATE_EVENTS = ["global_deviation", "global_sigmoid_deviation", "local_deviation", "local_sigmoid_deviation"]
 LABELS = POINT_EVENTS + STATE_EVENTS
 POINTS_EVENT_TIME = 1
 
