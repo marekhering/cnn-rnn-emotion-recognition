@@ -19,6 +19,7 @@ class PathConfig:
     OUTPUT_VIDEOS_PATH = 'data/output/videos'
     OUTPUT_VA_PATH = 'data/output/va'
     PLOTS_PATH = 'data/plots'
+    CM_PATH = 'data/confusion_matrices'
 
     @staticmethod
     def mkdir(_path: str):
