@@ -27,11 +27,14 @@ class PathConfig:
 
 
 class FrameConfig:
+    # Additional border in found face frame
+    FACE_FRAME_OFFSET = 20
+
     MAIN_FRAME_SIZE = (900, 1500)
     FRAME_BACKGROUND = (255, 255, 255)
 
 
 class AnalysisConing:
-    DELAY = 30  # seconds
-    STD_SENSITIVITY = 1.9  # Value refers to the multiplier for the standard deviation
-    LONG_TERM_TROUBLE_LENGTH = 50  # The length of negative abnormal valence to be classified as trouble
+    DELAY = 0  # seconds
+    CNN_STD_SENSITIVITY = 1.2  # Value refers to the multiplier for the standard deviation
+    RNN_STD_SENSITIVITY = 1.9  # Value refers to the multiplier for the standard deviation

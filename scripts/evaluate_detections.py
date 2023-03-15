@@ -69,10 +69,10 @@ def create_combined_detector_matrix(predictions_by_file_id: tp.Dict, ground_trut
     return {f"Combined M={min_num}": combined_matrix}
 
 
-def plot_confusion_matrices(confusion_matrix_by_detector: tp.Dict):
+def plot_confusion_matrices(confusion_matrix_by_detector: tp.Dict, model_label: str):
     for detector, confusion_matrix in confusion_matrix_by_detector.items():
         sn.heatmap(confusion_matrix, cmap="Blues", annot=True, annot_kws={"size": 12}, fmt='g')
-        plt.title(f"Detector: '{detector.replace('_', ' ')}', T={TOLERANCE}")
+        plt.title(f"Detector: '{detector.replace('_', ' ')}', T={TOLERANCE} Model: {model_label.upper()}")
         plt.xlabel("Actual value")
         plt.ylabel("Predicted value")
         plt.xticks([0.5, 1.5], ["True", "False"])
@@ -82,8 +82,8 @@ def plot_confusion_matrices(confusion_matrix_by_detector: tp.Dict):
         plt.show()
 
 
-def calculate_metrics(confusion_matrix_by_detector: tp.Dict):
-    print(f"Tolerance = {TOLERANCE}s")
+def calculate_metrics(confusion_matrix_by_detector: tp.Dict, model_label: str):
+    print(f"Tolerance = {TOLERANCE}s | Model: {model_label.upper()}")
     for detector, cm in confusion_matrix_by_detector.items():
         print("- " * 30)
         print(f"Metrics for {detector} detector:")
@@ -108,13 +108,13 @@ def calculate_detectors_correlation(predictions_by_file_id: tp.Dict, precision: 
     return corr_matrix / len(predictions_by_file_id)
 
 
-def plot_correlation_matrix(correlation_matrix: pd.DataFrame):
+def plot_correlation_matrix(correlation_matrix: pd.DataFrame, model_label: str):
     y_ticks = [elem.replace('_', '\n') for elem in correlation_matrix.index]
     x_ticks = [elem.replace('_', '\n') for elem in correlation_matrix.columns]
     sn.set(font_scale=0.8)
     sn.heatmap(correlation_matrix, cmap="Blues", annot=True, yticklabels=y_ticks, xticklabels=x_ticks)
     plt.xticks(rotation=0)
-    plt.title("Correlation matrix of application detectors", fontdict={"size": 14})
+    plt.title(f"Correlation matrix of application detectors using {model_label.upper()} model", fontdict={"size": 14})
     plt.tight_layout()
     PathConfig.mkdir(PathConfig.CM_PATH)
     plt.savefig(f"{PathConfig.CM_PATH}/Correlation_matrix.png")
@@ -122,20 +122,25 @@ def plot_correlation_matrix(correlation_matrix: pd.DataFrame):
 
 
 if __name__ == "__main__":
-    PREDICTED = load_predicted_labels()
     GROUND_TRUTH = load_ground_truth_labels()
 
-    # Confusion matrices by detectors
-    CONFUSION_MATRICES = create_confusion_matrices_by_detector(PREDICTED, GROUND_TRUTH)
-    plot_confusion_matrices(CONFUSION_MATRICES)
-    calculate_metrics(CONFUSION_MATRICES)
+    for MODEL_LABEL in ["cnn", "rnn"]:
+        try:
+            PREDICTED = load_predicted_labels(MODEL_LABEL)
+        except FileNotFoundError:
+            continue
 
-    # Combined confusion matrix from all detectors
-    for n in range(1, 6):
-        COMBINED_MATRIX = create_combined_detector_matrix(PREDICTED, GROUND_TRUTH, n)
-        plot_confusion_matrices(COMBINED_MATRIX)
-        calculate_metrics(COMBINED_MATRIX)
+        # Confusion matrices by detectors
+        CONFUSION_MATRICES = create_confusion_matrices_by_detector(PREDICTED, GROUND_TRUTH)
+        plot_confusion_matrices(CONFUSION_MATRICES, MODEL_LABEL)
+        calculate_metrics(CONFUSION_MATRICES, MODEL_LABEL)
 
-    # Correlation matrix between detectors
-    CORRELATION = calculate_detectors_correlation(PREDICTED)
-    plot_correlation_matrix(CORRELATION)
+        # Combined confusion matrix from all detectors
+        for n in range(1, 6):
+            COMBINED_MATRIX = create_combined_detector_matrix(PREDICTED, GROUND_TRUTH, n)
+            plot_confusion_matrices(COMBINED_MATRIX, MODEL_LABEL)
+            calculate_metrics(COMBINED_MATRIX, MODEL_LABEL)
+
+        # Correlation matrix between detectors
+        CORRELATION = calculate_detectors_correlation(PREDICTED)
+        plot_correlation_matrix(CORRELATION, MODEL_LABEL)

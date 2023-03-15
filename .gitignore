@@ -130,7 +130,7 @@ dmypy.json
 .idea/
 
 data/input
-data/output
+data/output*
 data/eval
 data/plots
 data/utils

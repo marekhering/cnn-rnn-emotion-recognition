@@ -10,7 +10,7 @@ from scripts.load_labels import load_info, load_ground_truth_labels, load_predic
 
 
 def plot_detections(ground_truth_by_file_id: tp.Dict, info: tp.Dict,
-                    predictions_by_file_id: tp.Dict, valence: tp.Dict, arousal: tp.Dict):
+                    predictions_by_file_id: tp.Dict, valence: tp.Dict, arousal: tp.Dict, model_label: str):
     PathConfig.mkdir(PathConfig.PLOTS_PATH)
     for file_id, predictions in tqdm(list(predictions_by_file_id.items()), desc="Plotting..."):
         fig, (a0, a1) = plt.subplots(2, gridspec_kw={'height_ratios': [3, 1]})
@@ -55,7 +55,7 @@ def plot_detections(ground_truth_by_file_id: tp.Dict, info: tp.Dict,
 
         a1.set_xlim(left=-100, right=len(arousal[file_id]))
         a1.set_xlabel("Frames")
-        fig.suptitle(f"Predictions for {file_id}")
+        fig.suptitle(f"Predictions for {file_id} using {model_label.upper()} model")
         plt.legend()
         plt.savefig(f"{PathConfig.PLOTS_PATH}/{file_id}.png")
         plt.show()
@@ -64,6 +64,8 @@ def plot_detections(ground_truth_by_file_id: tp.Dict, info: tp.Dict,
 if __name__ == "__main__":
     GROUND_TRUTH = load_ground_truth_labels()
     DF_INFO = load_info()
-    PREDICTED = load_predicted_labels()
-    VALENCE, AROUSAL = load_valence_arousal()
-    plot_detections(GROUND_TRUTH, DF_INFO, PREDICTED, VALENCE, AROUSAL)
+
+    for MODEL_LABEL in ["cnn", "rnn"]:
+        PREDICTED = load_predicted_labels(MODEL_LABEL)
+        VALENCE, AROUSAL = load_valence_arousal(MODEL_LABEL)
+        plot_detections(GROUND_TRUTH, DF_INFO, PREDICTED, VALENCE, AROUSAL, MODEL_LABEL)

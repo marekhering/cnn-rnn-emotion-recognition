@@ -12,7 +12,8 @@ from .activator import Activator
 
 
 class Analyst:
-    def __init__(self):
+    def __init__(self, sensitivity: float):
+        self.sensitivity = sensitivity
         self.__v = []
         self.__a = []
         self._va_buffer = Buffer()
@@ -155,10 +156,10 @@ class Analyst:
         return (2 / (1 + np.exp((-x) * 2.2))) - 1
 
     def deviation_threshold(self, std_buffer: Buffer):
-        return self._va_mean_local_buffer.np() - (std_buffer.np() * AnalysisConing.STD_SENSITIVITY)
+        return self._va_mean_local_buffer.np() - (std_buffer.np() * self.sensitivity)
 
     def sigmoid_threshold(self, std_buffer: Buffer):
-        return self.sigmoid(self._va_mean_local_buffer.np() - (std_buffer.np() * AnalysisConing.STD_SENSITIVITY))
+        return self.sigmoid(self._va_mean_local_buffer.np() - (std_buffer.np() * self.sensitivity))
 
     def derivative(self):
         if len(self._va_buffer) < 2:
@@ -169,7 +170,7 @@ class Analyst:
         return np.mean(self._derivative_buffer.last(window_size), axis=0)
 
     def derivative_threshold(self, std_buffer: Buffer):
-        return self._local_derivative_mean.np() - (std_buffer.np() * AnalysisConing.STD_SENSITIVITY)
+        return self._local_derivative_mean.np() - (std_buffer.np() * self.sensitivity)
 
     @staticmethod
     def is_intersection(values_1: tp.List, values_2: tp.List) -> bool:

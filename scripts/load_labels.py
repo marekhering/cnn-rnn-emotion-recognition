@@ -43,14 +43,15 @@ def load_info() -> tp.Dict:
     return info
 
 
-def load_predicted_labels():
+def load_predicted_labels(model_label: str = ""):
     def convert_line(_line: str):
         _line_split = _line.split("\t\t")
         return float(_line_split[0]), _line_split[1]
 
     detections = {}
-    for filename in tqdm(os.listdir(PathConfig.OUTPUT_VIDEOS_PATH), desc="Loading predicted labels"):
-        with open(f"{PathConfig.OUTPUT_VIDEOS_PATH}/{filename}") as f:
+    output_path = f"{PathConfig.OUTPUT_VIDEOS_PATH}_{model_label}" if model_label else PathConfig.OUTPUT_VIDEOS_PATH
+    for filename in tqdm(os.listdir(output_path), desc="Loading predicted labels"):
+        with open(f"{output_path}/{filename}") as f:
             lines = f.readlines()
 
         result = []
@@ -72,10 +73,11 @@ def load_predicted_labels():
     return detections
 
 
-def load_valence_arousal():
+def load_valence_arousal(model_label: str = ""):
     valence, arousal = {}, {}
-    for filename in os.listdir(PathConfig.OUTPUT_VA_PATH):
-        data = np.loadtxt(f"{PathConfig.OUTPUT_VA_PATH}/{filename}")
+    output_path = f"{PathConfig.OUTPUT_VA_PATH}_{model_label}" if model_label else PathConfig.OUTPUT_VIDEOS_PATH
+    for filename in os.listdir(output_path):
+        data = np.loadtxt(f"{output_path}/{filename}")
         filename = filename.split(".")[0]
         filename_split = filename.split("_")
         file_id = f"{filename_split[0]}_{filename_split[1][0]}"
