@@ -80,16 +80,37 @@ def plot_confusion_matrices(confusion_matrix_by_detector: tp.Dict, model_label: 
 
 
 def calculate_metrics(confusion_matrix_by_detector: tp.Dict, model_label: str):
+    calculated_metrics = [
+        {
+            "name": detector,
+            "confusion_matrix": cm,
+            "accuracy": round((cm[0, 0] + cm[1, 1]) / cm.sum(), 2),
+            "recall": round(cm[0, 0] / cm[:, 0].sum(), 2),
+            "precision": round(cm[0, 0] / cm[0, :].sum(), 2),
+        } for detector, cm in confusion_matrix_by_detector.items()
+    ]
+
     print(f"Tolerance = {TOLERANCE}s | Model: {model_label.upper()}")
-    for detector, cm in confusion_matrix_by_detector.items():
+    for metrics_dict in calculated_metrics:
         print("- " * 30)
-        print(f"Metrics for {detector} detector:")
-        print(f"Confusion matrix: \n{cm}")
-        _tp = cm[0, 0]
-        print(f"Accuracy: {round((_tp + cm[1, 1]) / cm.sum(), 2)}")
-        print(f"Recall: {round(_tp / cm[:, 0].sum(), 2)}")
-        print(f"Precision: {round(_tp / cm[0, :].sum(), 2)}")
+        print(f"Metrics for {metrics_dict['name']} detector:")
+        print(f"Confusion matrix: \n{metrics_dict['confusion_matrix']}")
+        print(f"Accuracy: {metrics_dict['accuracy']}")
+        print(f"Recall: {metrics_dict['recall']}")
+        print(f"Precision: {metrics_dict['precision']}")
         print()
+    return calculated_metrics
+
+
+def print_best_metrics(calculated_metrics: tp.List[tp.Dict]):
+    best_accuracy = max(calculated_metrics, key=lambda x: x["accuracy"])
+    print(f"Best accuracy detector: {best_accuracy['name']} accuracy: {best_accuracy['accuracy']}")
+
+    best_recall = max(calculated_metrics, key=lambda x: x["recall"])
+    print(f"Best recall detector: {best_recall['name']} recall: {best_recall['recall']}")
+
+    best_precision = max(calculated_metrics, key=lambda x: x["precision"])
+    print(f"Best precision detector: {best_precision['name']} precision: {best_precision['precision']}")
 
 
 def calculate_detectors_correlation(predictions_by_file_id: tp.Dict, precision: int = 1):
@@ -143,10 +164,13 @@ if __name__ == "__main__":
         calculate_metrics(CONFUSION_MATRICES, MODEL_LABEL)
 
         # Combined confusion matrix from all detectors
+        METRICS_LIST = []
         for n in range(1, 6):
             COMBINED_MATRIX = create_combined_detector_matrix(PREDICTED, GROUND_TRUTH, n)
             plot_confusion_matrices(COMBINED_MATRIX, MODEL_LABEL)
-            calculate_metrics(COMBINED_MATRIX, MODEL_LABEL)
+            METRIC = calculate_metrics(COMBINED_MATRIX, MODEL_LABEL)
+            METRICS_LIST.extend(METRIC)
+        print_best_metrics(METRICS_LIST)
 
         # Correlation matrix between detectors
         CORRELATION = calculate_detectors_correlation(PREDICTED)
