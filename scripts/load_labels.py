@@ -14,6 +14,10 @@ STATE_EVENTS = ["global_deviation", "global_sigmoid_deviation", "local_deviation
 LABELS = POINT_EVENTS + STATE_EVENTS
 POINTS_EVENT_TIME = 1
 
+NEGLIGIBLE_LABELS = ["happiness"]
+PASSIVE_LABELS = ["neutral"]
+ACTIVE_LABELS = ["confusion", "surprise", "anger"]
+
 
 def load_ground_truth_labels():
     labeled_emotions = defaultdict(list)
@@ -71,6 +75,16 @@ def load_predicted_labels(model_label: str = ""):
         file_id = f"{filename_split[0]}_{filename_split[1][0]}"
         detections[file_id] = result
     return detections
+
+
+def load_combined_predicted_labels():
+    combined = defaultdict(list)
+    for model_label in ["cnn", "rnn"]:
+        predictions_by_file = load_predicted_labels(model_label)
+        for file_id, predictions in predictions_by_file.items():
+            for prediction_label, *prediction_interval in predictions:
+                combined[file_id].append((f"{prediction_label}_{model_label}", *prediction_interval))
+    return dict(combined)
 
 
 def load_valence_arousal(model_label: str = ""):

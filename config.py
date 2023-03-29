@@ -8,6 +8,9 @@ class GeneralConfig:
     REQUIRED_FPS = 20
 
 
+OUTPUT_PATH = "data/output"
+
+
 class PathConfig:
     CNN_MODEL_PATH = 'data/models/simple_cnn_ccc_loss.0001-0.7792.hdf5'
     RNN_MODEL_PATH = 'data/models/gru_ccc_loss-epoch_17-loss_0.6913-ccc_v_0.2252-ccc_a_0.3922.hdf5'
@@ -16,8 +19,8 @@ class PathConfig:
     EVAL_VIDEOS_PATH = 'data/eval/videos'
     VIDEOS_LINKS_PATH = 'data/utils/links.txt'
     VIDEOS_PATH = 'data/input/videos'
-    OUTPUT_VIDEOS_PATH = 'data/output/videos'
-    OUTPUT_VA_PATH = 'data/output/va'
+    OUTPUT_VIDEOS_PATH = f'{OUTPUT_PATH}/videos'
+    OUTPUT_VA_PATH = f'{OUTPUT_PATH}/va'
     PLOTS_PATH = 'data/plots'
     CM_PATH = 'data/confusion_matrices'
 
@@ -28,7 +31,7 @@ class PathConfig:
 
 class FrameConfig:
     # Additional border in found face frame
-    FACE_FRAME_OFFSET = 20
+    FACE_FRAME_OFFSET = 0
 
     MAIN_FRAME_SIZE = (900, 1500)
     FRAME_BACKGROUND = (255, 255, 255)
@@ -36,5 +39,5 @@ class FrameConfig:
 
 class AnalysisConing:
     DELAY = 0  # seconds
-    CNN_STD_SENSITIVITY = 1.2  # Value refers to the multiplier for the standard deviation
+    CNN_STD_SENSITIVITY = 1.9  # Value refers to the multiplier for the standard deviation
     RNN_STD_SENSITIVITY = 1.9  # Value refers to the multiplier for the standard deviation

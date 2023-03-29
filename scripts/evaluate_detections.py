@@ -8,16 +8,13 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from config import PathConfig
-from scripts.load_labels import load_ground_truth_labels, load_predicted_labels, LABELS
+from scripts.load_labels import load_ground_truth_labels, load_predicted_labels, load_combined_predicted_labels, \
+    ACTIVE_LABELS, NEGLIGIBLE_LABELS, PASSIVE_LABELS
 
 
 _T_LABEL = tp.Tuple[str, float, float]
 TOLERANCE = 5
 MINIMUM_LABELS = 3
-
-NEGLIGIBLE_LABELS = ["happiness"]
-PASSIVE_LABELS = ["neutral"]
-ACTIVE_LABELS = ["confusion", "surprise", "anger"]
 
 
 def get_intersections(boundary1: tp.Tuple[float, float], labels: tp.List[_T_LABEL], tolerance: int = 0
@@ -78,7 +75,7 @@ def plot_confusion_matrices(confusion_matrix_by_detector: tp.Dict, model_label: 
         plt.xticks([0.5, 1.5], ["True", "False"])
         plt.yticks([0.5, 1.5], ["True", "False"])
         PathConfig.mkdir(PathConfig.CM_PATH)
-        plt.savefig(f"{PathConfig.CM_PATH}/CM_{detector}_T{TOLERANCE}.png")
+        plt.savefig(f"{PathConfig.CM_PATH}/CM_{detector}_T{TOLERANCE}_{model_label}.png")
         plt.show()
 
 
@@ -96,11 +93,13 @@ def calculate_metrics(confusion_matrix_by_detector: tp.Dict, model_label: str):
 
 
 def calculate_detectors_correlation(predictions_by_file_id: tp.Dict, precision: int = 1):
+    labels = list(np.unique([prediction[0] for predictions in predictions_by_file_id.values() for prediction in predictions]))
+
     corr_matrix = None
     for file_id, predictions in tqdm(list(predictions_by_file_id.items()), desc="Calculating detectors correlation"):
         vector_length = np.ceil(np.array(predictions)[:, -2:].astype(float)).max().astype(int) if predictions else 1
         time_vector = np.arange(0, vector_length - 1, 10**(-precision))
-        df = pd.DataFrame(np.zeros((len(time_vector), len(LABELS))), columns=LABELS)
+        df = pd.DataFrame(np.zeros((len(time_vector), len(labels))), columns=labels)
         for detector, t0, t1 in predictions:
             df[detector][round(t0 * 10**precision): round(t1 * 10**precision)] = 1
         df_corr = df.corr().fillna(1)
@@ -117,12 +116,20 @@ def plot_correlation_matrix(correlation_matrix: pd.DataFrame, model_label: str):
     plt.title(f"Correlation matrix of application detectors using {model_label.upper()} model", fontdict={"size": 14})
     plt.tight_layout()
     PathConfig.mkdir(PathConfig.CM_PATH)
-    plt.savefig(f"{PathConfig.CM_PATH}/Correlation_matrix.png")
+    plt.savefig(f"{PathConfig.CM_PATH}/Correlation_matrix_{model_label}.png")
     plt.show()
 
 
 if __name__ == "__main__":
     GROUND_TRUTH = load_ground_truth_labels()
+
+    # PREDICTED = load_combined_predicted_labels()
+    # for n in range(1, 30):
+    #     COMBINED_MATRIX = create_combined_detector_matrix(PREDICTED, GROUND_TRUTH, n)
+    #     plot_confusion_matrices(COMBINED_MATRIX, "Combined")
+    #     calculate_metrics(COMBINED_MATRIX, "Combined")
+    # CORRELATION = calculate_detectors_correlation(PREDICTED)
+    # plot_correlation_matrix(CORRELATION, "Combined")
 
     for MODEL_LABEL in ["cnn", "rnn"]:
         try:
