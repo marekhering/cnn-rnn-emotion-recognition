@@ -12,8 +12,11 @@ from .activator import Activator
 
 
 class Analyst:
-    def __init__(self, sensitivity: float):
+    def __init__(self, sensitivity: float, moving_average_size: int, derivative_moving_average_size: int):
         self.sensitivity = sensitivity
+        self.moving_average_size = moving_average_size
+        self.derivative_moving_average_size = derivative_moving_average_size
+
         self.__v = []
         self.__a = []
         self._va_buffer = Buffer()
@@ -47,7 +50,7 @@ class Analyst:
         self._global_derivative_std = Buffer()
 
     @property
-    def intersections(self) -> tp.List[tp.Tuple[timedelta, Activator]]:
+    def events(self) -> tp.List[tp.Tuple[timedelta, Activator]]:
         # Unpack Activator to make list of Activator, time tuple
         return list(itertools.chain(*[[(t, act) for t in times] for act, times in self._intersections.items()]))
 
@@ -65,7 +68,7 @@ class Analyst:
 
         self._va_buffer.append(valence_arousal)
         # Deviation activators
-        self._va_moving_average.append(self.va_moving_average(10))
+        self._va_moving_average.append(self.va_moving_average(self.moving_average_size))
 
         # # Local deviation activator
         self._va_mean_local_buffer.append(self._va_buffer.np().mean(axis=0))
@@ -79,7 +82,7 @@ class Analyst:
 
         # Rapid deprecation activator
         self._derivative_buffer.append(self.derivative())
-        self._derivative_moving_average.append(self.derivative_moving_average(10))
+        self._derivative_moving_average.append(self.derivative_moving_average(self.derivative_moving_average_size))
 
         # # Local deprecation activator
         self._local_derivative_mean.append(self._derivative_buffer.np().mean(axis=0))
@@ -198,7 +201,7 @@ class Analyst:
     def create_deviation_chart(self):
         return self.__create_analysis_chart([
             (self._va_buffer.np()[:, 0], "Valence"),
-            (self._va_moving_average.np()[:, 0], "10 period average"),
+            (self._va_moving_average.np()[:, 0], f"{self.moving_average_size} period average"),
             (self.deviation_threshold(self._va_std_local_buffer)[:, 0], "Local threshold"),
             (self.deviation_threshold(self._va_std_global_buffer)[:, 0], "Global threshold"),
             (self.sigmoid_threshold(self._va_std_local_buffer)[:, 0], "Local sigmoid threshold"),
@@ -208,7 +211,7 @@ class Analyst:
     def create_deprecation_chart(self):
         return self.__create_analysis_chart([
             (self._derivative_buffer.np()[:, 0], "Derivative value"),
-            (self._derivative_moving_average.np()[:, 0], "10 period average"),
+            (self._derivative_moving_average.np()[:, 0], f"{self.derivative_moving_average_size} period average"),
             (self.derivative_threshold(self._local_derivative_std)[:, 0], "Local threshold"),
             (self.derivative_threshold(self._global_derivative_std)[:, 0], "Global threshold"),
         ], "Rapid deprecation detection")

@@ -8,7 +8,7 @@ class GeneralConfig:
     REQUIRED_FPS = 20
 
 
-OUTPUT_PATH = "data/output"
+OUTPUT_PATH = "data/output_B0_CS2.5_RS2.2_CONTR_8_1_16_2"
 
 
 class PathConfig:
@@ -39,5 +39,10 @@ class FrameConfig:
 
 class AnalysisConing:
     DELAY = 0  # seconds
-    CNN_STD_SENSITIVITY = 1.9  # Value refers to the multiplier for the standard deviation
-    RNN_STD_SENSITIVITY = 1.9  # Value refers to the multiplier for the standard deviation
+    CNN_STD_SENSITIVITY = 2.5  # Value refers to the multiplier for the standard deviation
+    RNN_STD_SENSITIVITY = 2.2  # Value refers to the multiplier for the standard deviation
+
+    CNN_MOVING_AVERAGE_WINDOW = 8
+    CNN_DERIVATIVE_MOVING_AVERAGE_WINDOW = 1
+    RNN_MOVING_AVERAGE_WINDOW = 16
+    RNN_DERIVATIVE_MOVING_AVERAGE_WINDOW = 2

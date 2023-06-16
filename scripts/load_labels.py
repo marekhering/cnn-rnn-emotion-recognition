@@ -10,7 +10,8 @@ from config import PathConfig
 
 
 POINT_EVENTS = ["global_rapid_deprecation", "local_rapid_deprecation"]
-STATE_EVENTS = ["global_deviation", "global_sigmoid_deviation", "local_deviation", "local_sigmoid_deviation"]
+STATE_EVENTS = ["global_deviation", "global_sigmoid_deviation", "local_deviation", "local_sigmoid_deviation",
+                "naive_bound_00", "naive_bound_01", "naive_bound_03", "naive_bound_05"]
 LABELS = POINT_EVENTS + STATE_EVENTS
 POINTS_EVENT_TIME = 1
 
@@ -79,7 +80,7 @@ def load_predicted_labels(model_label: str = ""):
 
 def load_combined_predicted_labels():
     combined = defaultdict(list)
-    for model_label in ["cnn", "rnn"]:
+    for model_label in ["cnn", "rnn", "cnn_naive", "rnn_naive"]:
         predictions_by_file = load_predicted_labels(model_label)
         for file_id, predictions in predictions_by_file.items():
             for prediction_label, *prediction_interval in predictions:

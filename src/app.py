@@ -6,7 +6,7 @@ from datetime import timedelta
 import cv2
 import numpy as np
 
-from .analysis import Analyst, Activator
+from .analysis import Analyst, Activator, NaiveAnalyst
 from .models import CNNModel, RNNModel
 from .utils import ValenceArousal
 from .vis import VideoHandler, Frame, ValenceArousalSpace
@@ -21,8 +21,12 @@ class App:
         self._reset_attributes()
 
     def _reset_attributes(self):
-        self.rnn_analyst = Analyst(AnalysisConing.RNN_STD_SENSITIVITY)
-        self.cnn_analyst = Analyst(AnalysisConing.CNN_STD_SENSITIVITY)
+        self.rnn_analyst = Analyst(AnalysisConing.RNN_STD_SENSITIVITY, AnalysisConing.RNN_MOVING_AVERAGE_WINDOW,
+                                   AnalysisConing.RNN_DERIVATIVE_MOVING_AVERAGE_WINDOW)
+        self.cnn_analyst = Analyst(AnalysisConing.CNN_STD_SENSITIVITY, AnalysisConing.CNN_MOVING_AVERAGE_WINDOW,
+                                   AnalysisConing.CNN_DERIVATIVE_MOVING_AVERAGE_WINDOW)
+        self.rnn_naive_analyst = NaiveAnalyst()
+        self.cnn_naive_analyst = NaiveAnalyst()
         self._feature_buffer = []
         self._cnn_va = ValenceArousal()
         self._rnn_va = ValenceArousal()
@@ -51,6 +55,8 @@ class App:
                 self.cnn_analyst.add_inference_result(self._cnn_va, video_handler.get_frame_time())
                 if rnn_run:
                     self.rnn_analyst.add_inference_result(self._rnn_va, video_handler.get_frame_time())
+                self.rnn_naive_analyst.add_inference_result(self._rnn_va, video_handler.get_frame_time())
+                self.cnn_naive_analyst.add_inference_result(self._cnn_va, video_handler.get_frame_time())
 
                 if vis:
                     self._visualize(video_frame, prepared_img)
@@ -58,8 +64,10 @@ class App:
                 if self.listen_for_quit_button():
                     break
         if save:
-            self.save_output(source, self.intersections_as_boris_format(self.rnn_analyst.intersections), "rnn")
-            self.save_output(source, self.intersections_as_boris_format(self.cnn_analyst.intersections), "cnn")
+            self.save_output(source, self.events_as_boris_format(self.rnn_analyst.events), "rnn")
+            self.save_output(source, self.events_as_boris_format(self.cnn_analyst.events), "cnn")
+            self.save_output(source, self.events_as_boris_format(self.rnn_naive_analyst.events), "rnn_naive")
+            self.save_output(source, self.events_as_boris_format(self.cnn_naive_analyst.events), "cnn_naive")
             self.save_va(source, self.rnn_analyst.valence, self.rnn_analyst.arousal, "rnn")
             self.save_va(source, self.cnn_analyst.valence, self.cnn_analyst.arousal, "cnn")
 
@@ -68,7 +76,7 @@ class App:
         output_path = f"{PathConfig.OUTPUT_VIDEOS_PATH}_{label}"
         PathConfig.mkdir(output_path)
         # Get file from path, change existing extension to .json
-        output_file = f"{os.path.split(source)[1].split('.')[0]}.txt"
+        output_file = f"{os.path.split(source)[1].split('.')[0] if isinstance(source, str) else source}.txt"
         output_file = f"{output_path}/{output_file}"
         with open(output_file, 'w') as f:
             f.write(_txt)
@@ -77,11 +85,12 @@ class App:
     def save_va(source, valence: np.ndarray, arousal: np.ndarray, label: str):
         output_path = f"{PathConfig.OUTPUT_VA_PATH}_{label}"
         PathConfig.mkdir(output_path)
-        output_file = f"{output_path}/{os.path.split(source)[1].split('.')[0]}"
+        output_file = f"{os.path.split(source)[1].split('.')[0] if isinstance(source, str) else source}"
+        output_file = f"{output_path}/{output_file}"
         np.savetxt(f"{output_file}_valence.txt", valence, delimiter=',')
         np.savetxt(f"{output_file}_arousal.txt", arousal, delimiter=',')
 
-    def intersections_as_boris_format(self, intersections: tp.List[tp.Tuple[timedelta, Activator]]):
+    def events_as_boris_format(self, intersections: tp.List[tp.Tuple[timedelta, Activator]]):
         boris_format = []
         for _time, activator in intersections:
             boris_time = str(_time.total_seconds()).split('.')
@@ -110,11 +119,12 @@ class App:
             return _x[0] + _x[2] / 2, _x[1] + _x[3] / 2
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = self.face_detection_model.detectMultiScale(gray, 1.3, 5, flags=cv2.CASCADE_SCALE_IMAGE)
+        contrast = cv2.equalizeHist(gray)
+        faces = self.face_detection_model.detectMultiScale(contrast, 1.3, 5, flags=cv2.CASCADE_SCALE_IMAGE)
         if len(faces) > 0:
             reference_point = get_middle([0, 0, *frame.shape] if self._face_position is None else self._face_position)
             closest = min(faces, key=lambda _f: manhattan_dist(reference_point, (get_middle(_f))))
-            self._face_position = closest if self._face_position is None else (closest + self._face_position) // 2
+            self._face_position = closest if self._face_position is None else (9 * closest + self._face_position) // 10
 
         if self._face_position is not None:
             x, y, w, h = self._face_position
@@ -129,8 +139,8 @@ class App:
     def _prepare_img(self, img: np.ndarray) -> np.ndarray:
         resized_img = cv2.resize(img, self.cnn_model.image_shape)
         grayscale_image = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY)
-        contrast_image = cv2.equalizeHist(grayscale_image)
-        normalized_img = (contrast_image / 255.).astype(np.float)
+        # contrast_image = cv2.equalizeHist(grayscale_image)
+        normalized_img = (grayscale_image / 255.).astype(np.float)
         return np.expand_dims(normalized_img, axis=-1)
 
     def _inference_feature_extractor(self, img: np.ndarray):
@@ -171,8 +181,8 @@ class App:
         print(f"Source: {source} time: {str(_time)[:12].ljust(8, '.').ljust(12, '0') if _time is not None else ''} | "
               f"CNN: {self._cnn_va} "
               f"RNN: {self._rnn_va} "
-              f"Detected RNN Troubles: {[f'{ti}: {act.name}' for ti, act in self.rnn_analyst.intersections]} "
-              f"Detected CNN Troubles: {[f'{ti}: {act.name}' for ti, act in self.cnn_analyst.intersections]} ")
+              f"Detected RNN Troubles: {[f'{ti}: {act.name}' for ti, act in self.rnn_analyst.events]} "
+              f"Detected CNN Troubles: {[f'{ti}: {act.name}' for ti, act in self.cnn_analyst.events]} ")
 
     @staticmethod
     def listen_for_quit_button() -> bool:

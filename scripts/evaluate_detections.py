@@ -152,7 +152,7 @@ if __name__ == "__main__":
     # CORRELATION = calculate_detectors_correlation(PREDICTED)
     # plot_correlation_matrix(CORRELATION, "Combined")
 
-    for MODEL_LABEL in ["cnn", "rnn"]:
+    for MODEL_LABEL in ["cnn", "rnn", "cnn_naive", "rnn_naive"]:
         try:
             PREDICTED = load_predicted_labels(MODEL_LABEL)
         except FileNotFoundError:

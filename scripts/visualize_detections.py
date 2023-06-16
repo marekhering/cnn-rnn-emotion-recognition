@@ -16,7 +16,7 @@ def plot_detections(ground_truth_by_file_id: tp.Dict, info: tp.Dict,
 
     for file_id, predictions in tqdm(list(predictions_by_file_id.items()), desc="Plotting..."):
         labels = list(np.unique([prediction[0] for prediction in predictions]))
-        labels.sort(key=lambda x: (x[-3], x[0]), reverse=True)
+        labels.sort(key=lambda x: (x[-9] if x.endswith("naive") else x[-3], x[0]), reverse=True)
         fig, (a0, a1) = plt.subplots(2, gridspec_kw={'height_ratios': [3, 1]})
         fig.set_size_inches(28.5, 10.5)
         plt.style.use("seaborn-whitegrid")
@@ -71,11 +71,11 @@ if __name__ == "__main__":
     GROUND_TRUTH = load_ground_truth_labels()
     DF_INFO = load_info()
 
-    # COMBINED_PREDICTIONS = load_combined_predicted_labels()
-    # VALENCE, AROUSAL = load_valence_arousal("rnn")
-    # plot_detections(GROUND_TRUTH, DF_INFO, COMBINED_PREDICTIONS, VALENCE, AROUSAL, "Combined")
+    COMBINED_PREDICTIONS = load_combined_predicted_labels()
+    VALENCE, AROUSAL = load_valence_arousal("rnn")
+    plot_detections(GROUND_TRUTH, DF_INFO, COMBINED_PREDICTIONS, VALENCE, AROUSAL, "Combined")
 
-    for MODEL_LABEL in ["cnn", "rnn"]:
+    for MODEL_LABEL in ["cnn", "rnn", "cnn_naive", "rnn_naive"]:
         PREDICTED = load_predicted_labels(MODEL_LABEL)
-        VALENCE, AROUSAL = load_valence_arousal(MODEL_LABEL)
+        VALENCE, AROUSAL = load_valence_arousal(MODEL_LABEL.split("_")[0])
         plot_detections(GROUND_TRUTH, DF_INFO, PREDICTED, VALENCE, AROUSAL, MODEL_LABEL)
