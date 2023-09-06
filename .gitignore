@@ -135,3 +135,4 @@ data/eval
 data/plots
 data/utils
 data/confusion_matrices
+data/*.old

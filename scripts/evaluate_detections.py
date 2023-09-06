@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sn
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from tqdm import tqdm
 
 from config import PathConfig
@@ -15,6 +16,17 @@ from scripts.load_labels import load_ground_truth_labels, load_predicted_labels,
 _T_LABEL = tp.Tuple[str, float, float]
 TOLERANCE = 5
 MINIMUM_LABELS = 3
+
+mpl.rc('font', size=14)
+
+map_labels = {
+    "global_deviation": "AGO",
+    "local_deviation": "ALO",
+    "global_sigmoid_deviation": "AGSO",
+    "local_sigmoid_deviation": "ALSO",
+    "local_rapid_deprecation": "AGSS",
+    "global_rapid_deprecation": "ALSS"
+}
 
 
 def get_intersections(boundary1: tp.Tuple[float, float], labels: tp.List[_T_LABEL], tolerance: int = 0
@@ -120,7 +132,7 @@ def calculate_detectors_correlation(predictions_by_file_id: tp.Dict, precision: 
     for file_id, predictions in tqdm(list(predictions_by_file_id.items()), desc="Calculating detectors correlation"):
         vector_length = np.ceil(np.array(predictions)[:, -2:].astype(float)).max().astype(int) if predictions else 1
         time_vector = np.arange(0, vector_length - 1, 10**(-precision))
-        df = pd.DataFrame(np.zeros((len(time_vector), len(labels))), columns=labels)
+        df = pd.DataFrame(np.zeros((len(time_vector), len(labels))), columns=list(map_labels.keys()))
         for detector, t0, t1 in predictions:
             df[detector][round(t0 * 10**precision): round(t1 * 10**precision)] = 1
         df_corr = df.corr().fillna(1)
@@ -129,10 +141,11 @@ def calculate_detectors_correlation(predictions_by_file_id: tp.Dict, precision: 
 
 
 def plot_correlation_matrix(correlation_matrix: pd.DataFrame, model_label: str):
-    y_ticks = [elem.replace('_', '\n') for elem in correlation_matrix.index]
-    x_ticks = [elem.replace('_', '\n') for elem in correlation_matrix.columns]
-    sn.set(font_scale=0.8)
-    sn.heatmap(correlation_matrix, cmap="Blues", annot=True, yticklabels=y_ticks, xticklabels=x_ticks)
+    y_ticks = [map_labels[elem] for elem in correlation_matrix.index]
+    x_ticks = [map_labels[elem] for elem in correlation_matrix.columns]
+    sn.set(font_scale=0.85)
+    sn.heatmap(correlation_matrix, cmap="Blues", annot=True, yticklabels=y_ticks, xticklabels=x_ticks,
+               annot_kws={"size": 12}, cbar=False)
     plt.xticks(rotation=0)
     plt.title(f"Correlation matrix of application detectors using {model_label.upper()} model", fontdict={"size": 14})
     plt.tight_layout()
@@ -144,13 +157,13 @@ def plot_correlation_matrix(correlation_matrix: pd.DataFrame, model_label: str):
 if __name__ == "__main__":
     GROUND_TRUTH = load_ground_truth_labels()
 
-    # PREDICTED = load_combined_predicted_labels()
-    # for n in range(1, 30):
-    #     COMBINED_MATRIX = create_combined_detector_matrix(PREDICTED, GROUND_TRUTH, n)
-    #     plot_confusion_matrices(COMBINED_MATRIX, "Combined")
-    #     calculate_metrics(COMBINED_MATRIX, "Combined")
-    # CORRELATION = calculate_detectors_correlation(PREDICTED)
-    # plot_correlation_matrix(CORRELATION, "Combined")
+    PREDICTED = load_combined_predicted_labels()
+    for n in range(1, 7):
+        COMBINED_MATRIX = create_combined_detector_matrix(PREDICTED, GROUND_TRUTH, n)
+        plot_confusion_matrices(COMBINED_MATRIX, "Combined")
+        calculate_metrics(COMBINED_MATRIX, "Combined")
+    CORRELATION = calculate_detectors_correlation(PREDICTED)
+    plot_correlation_matrix(CORRELATION, "Combined")
 
     for MODEL_LABEL in ["cnn", "rnn", "cnn_naive", "rnn_naive"]:
         try:
@@ -165,7 +178,7 @@ if __name__ == "__main__":
 
         # Combined confusion matrix from all detectors
         METRICS_LIST = []
-        for n in range(1, 6):
+        for n in range(1, 7):
             COMBINED_MATRIX = create_combined_detector_matrix(PREDICTED, GROUND_TRUTH, n)
             plot_confusion_matrices(COMBINED_MATRIX, MODEL_LABEL)
             METRIC = calculate_metrics(COMBINED_MATRIX, MODEL_LABEL)
