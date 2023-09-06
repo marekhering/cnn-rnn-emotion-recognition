@@ -129,5 +129,10 @@ dmypy.json
 .pyre/
 .idea/
 
-data/input/
-data/output/
+data/input
+data/output*
+data/eval
+data/plots
+data/utils
+data/confusion_matrices
+data/*.old
